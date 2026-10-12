@@ -466,6 +466,7 @@ h1, h2, h3, p { margin-top: 0; }
       calc(env(safe-area-inset-left, 0px) + 10px);
   }
   .topbar { flex: 0 0 auto; min-width: 0; padding: 5px 6px 7px; }
+  .topbar-actions { gap: 6px; }
   .settings-button span:nth-child(2), #soundLabel { display: none; }
   .brand { gap: 7px; color: #123d67; }
   .brand-mark { width: 32px; height: 32px; border-radius: 11px; font-size: 17px; }
@@ -480,8 +481,8 @@ h1, h2, h3, p { margin-top: 0; }
   }
   .theme-picker { min-width: 0; padding: 0 7px; }
   .theme-picker select { width: clamp(60px, 18vw, 86px); min-width: 0; padding: 0 13px 0 4px; font-size: 9px; }
-  .theme-picker, .icon-button { height: 36px; }
-  .icon-button { width: 36px; min-width: 36px; flex: 0 0 36px; justify-content: center; padding: 0; }
+  .theme-picker, .icon-button { height: 40px; }
+  .icon-button { width: 40px; min-width: 40px; flex: 0 0 40px; justify-content: center; padding: 0; }
   .settings-button { background: linear-gradient(145deg, #f8dc83, #e7b95a); color: #634a21; box-shadow: 0 3px 8px rgba(14,68,103,.18); }
   .intro, .how-to-play, .page-footer { display: none; }
   main { display: flex; min-height: 0; flex: 1 1 auto; padding: 0; }
@@ -497,7 +498,7 @@ h1, h2, h3, p { margin-top: 0; }
     box-shadow: none;
     backdrop-filter: none;
   }
-  .game-card-header { flex: 0 0 auto; flex-direction: row; align-items: center; gap: 7px; padding: 4px 10px 8px; }
+  .game-card-header { display: none; }
   .game-title-row { gap: 5px; }
   .game-title-row h2 { color: #fff; font-size: 14px; text-shadow: 0 1px 4px rgba(12,68,111,.32); }
   .level-badge { padding: 4px 6px; background: rgba(255,255,255,.7); color: #296d8a; font-size: 8px; }
@@ -576,16 +577,34 @@ h1, h2, h3, p { margin-top: 0; }
   .reserve-slot .tile { border-radius: 7px; }
   .reserve-placeholder { color: rgba(255,255,255,.8); }
   .game-footer { flex: 0 0 auto; min-height: 0; align-items: stretch; flex-direction: column; gap: 4px; padding: 5px 1px 2px; }
-  .game-message-wrap { height: 17px; min-height: 17px; justify-content: center; gap: 4px; }
+  .game-message-wrap {
+    display: grid;
+    height: 18px;
+    min-height: 18px;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: 1fr;
+    align-items: center;
+    gap: 5px;
+  }
+  .game-message-wrap .message-mark { grid-column: 1; grid-row: 1; }
+  .game-message-wrap p { grid-column: 2; grid-row: 1; text-align: center; }
+  .game-message-wrap .stats { width: auto; flex: 0 0 auto; grid-column: 3; grid-row: 1; }
+  .game-message-wrap .cancel-selection { grid-column: 4; grid-row: 1; }
   .message-mark { color: #fff4b9; font-size: 11px; }
   .game-message-wrap p { overflow: hidden; color: rgba(255,255,255,.94); font-size: 8px; text-align: center; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px rgba(8,65,108,.3); }
   .cancel-selection { padding: 3px 6px; background: rgba(255,255,255,.75); font-size: 8px; }
   .game-actions { display: grid; width: 100%; flex: 0 0 auto; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
   .game-actions button { min-width: 0; flex: none; padding: 0 5px; border-radius: 10px; font-size: 8px; white-space: nowrap; }
-  .game-actions #shuffleButton, .game-actions #undoButton { min-height: 47px; grid-column: span 3; border: 1px solid rgba(255,255,255,.85); border-radius: 15px; font-size: 13px; box-shadow: 0 5px 12px rgba(7,54,101,.22), inset 0 1px 0 rgba(255,255,255,.8); }
+  .game-actions #shuffleButton, .game-actions #undoButton { min-height: 48px; grid-column: span 3; border: 1px solid rgba(255,255,255,.85); border-radius: 15px; font-size: 13px; box-shadow: 0 5px 12px rgba(7,54,101,.22), inset 0 1px 0 rgba(255,255,255,.8); }
   .game-actions #shuffleButton { background: linear-gradient(145deg,#e7f5ff,#90c4ed); color: #245b94; }
   .game-actions #undoButton { background: linear-gradient(145deg,#ffd7e9,#ee8ab9); color: #8d4166; }
-  .game-actions #restartButton, .game-actions #saveButton, .game-actions #newGameButton { min-height: 29px; grid-column: span 2; border-color: rgba(255,255,255,.6); background: rgba(255,255,255,.64); color: #245d82; box-shadow: 0 2px 7px rgba(8,63,106,.1); }
+  .game-actions #restartButton, .game-actions #saveButton, .game-actions #newGameButton { min-height: 34px; grid-column: span 2; border-color: rgba(255,255,255,.6); background: rgba(255,255,255,.64); color: #245d82; box-shadow: 0 2px 7px rgba(8,63,106,.1); }
+  .close-button { width: 40px; height: 40px; }
+  .dialog-actions { gap: 10px; }
+  .dialog-actions .primary-button, .dialog-actions .secondary-button { min-height: 42px; padding: 0 14px; }
+  .save-slot-actions { gap: 8px; }
+  .save-slot-action, .save-slot-delete { min-height: 36px; padding: 0 12px; }
+  .victory-banner button { min-height: 34px; padding: 0 8px; }
   .victory-banner { flex: 0 0 auto; margin: 5px 0 0; padding: 8px 10px; border-radius: 12px; }
   .victory-sparkle { width: 28px; height: 28px; flex-basis: 28px; }
   .victory-banner strong { font-size: 11px; }
@@ -655,10 +674,10 @@ h1, h2, h3, p { margin-top: 0; }
   .reserve-slots { min-height: 28px; }
   .reserve-slot { width: 29px; height: 29px; flex-basis: 29px; }
   .game-footer { gap: 2px; padding-top: 3px; }
-  .game-message-wrap { height: 13px; min-height: 13px; }
-  .game-actions { gap: 3px; }
-  .game-actions #shuffleButton, .game-actions #undoButton { min-height: 39px; }
-  .game-actions #restartButton, .game-actions #saveButton, .game-actions #newGameButton { min-height: 25px; }
+  .game-message-wrap { height: 18px; min-height: 18px; }
+  .game-actions { gap: 4px; }
+  .game-actions #shuffleButton, .game-actions #undoButton { min-height: 44px; }
+  .game-actions #restartButton, .game-actions #saveButton, .game-actions #newGameButton { min-height: 30px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
