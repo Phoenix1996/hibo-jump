@@ -1444,7 +1444,7 @@
   async function animateMove(move) {
     const source = sourceElements(move).filter(Boolean)[0];
     const oldDestination = destinationElements(move).filter(Boolean)[0];
-    if (!source || !oldDestination) return;
+    if (!source || !oldDestination) return false;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const token = move.patternIds[0];
     const sourceRect = source.getBoundingClientRect();
@@ -1480,7 +1480,7 @@
       : elementsForColumnLevels(move.target.index, board.columns[move.target.index].length - 1, 1)[0];
     if (!destination) {
       flight.remove();
-      return;
+      return true;
     }
     destination.classList.add("is-flying");
     if (revealedMystery) {
@@ -1508,6 +1508,7 @@
     await animateSourceReveal(revealCell, reducedMotion);
     playSound("tile", token);
     vibrateOnLanding();
+    return true;
   }
   async function animateGroupRevealTile(tile, token, reducedMotion) {
     if (!tile || !isMysteryToken(token)) return;
@@ -1553,8 +1554,9 @@
     const targetStart = targetColumn.length;
     const sourceCells = elementsForColumnLevels(sourceIndex, sourceStart, move.count);
     const sourceRects = sourceCells.map(function (cell) { return cell.getBoundingClientRect(); });
-    if (sourceCells.length !== move.count) return;
+    if (sourceCells.length !== move.count) return false;
     const sourceBounds = unionRect(sourceRects);
+    if (!sourceBounds) return false;
     const tokens = sourceColumn.slice(sourceStart);
     const newlyExposedLevel = sourceStart - 1;
     const revealSource = newlyExposedLevel >= 0 && isMysteryToken(sourceColumn[newlyExposedLevel]);
@@ -1636,67 +1638,95 @@
     tokens.forEach(function (token) { playSound("tile", token); });
     vibrateOnLanding();
     await Promise.all(targetCells.map(function (cell) { return animateLandingCell(cell, reducedMotion); }));
+    return true;
   }
 
   async function performMove(move) {
     if (isAnimating) return;
     prepareAudioContext();
+    const previousBoard = cloneBoard(board);
+    const previousMoveCount = moveCount;
+    let committed = false;
     isAnimating = true;
-    ui.columns.classList.add("is-animating");
-    ui.reserveSlots.classList.add("is-animating");
-    ui.cancelSelectionButton.hidden = true;
-    ui.themeSelect.disabled = true;
-    ui.settingsButton.disabled = true;
-    ui.campaignButton.disabled = true;
-    ui.newGameButton.disabled = true;
-    ui.restartButton.disabled = true;
-    ui.shuffleButton.disabled = true;
-    ui.undoButton.disabled = true;
-    ui.saveButton.disabled = true;
-    ui.columns.querySelectorAll(".column").forEach(function (element) { element.setAttribute("aria-disabled", "true"); });
-    ui.reserveSlots.querySelectorAll(".reserve-slot").forEach(function (element) { element.setAttribute("aria-disabled", "true"); });
+    try {
+      ui.columns.classList.add("is-animating");
+      ui.reserveSlots.classList.add("is-animating");
+      ui.cancelSelectionButton.hidden = true;
+      ui.themeSelect.disabled = true;
+      ui.settingsButton.disabled = true;
+      ui.campaignButton.disabled = true;
+      ui.newGameButton.disabled = true;
+      ui.restartButton.disabled = true;
+      ui.shuffleButton.disabled = true;
+      ui.undoButton.disabled = true;
+      ui.saveButton.disabled = true;
+      ui.columns.querySelectorAll(".column").forEach(function (element) { element.setAttribute("aria-disabled", "true"); });
+      ui.reserveSlots.querySelectorAll(".reserve-slot").forEach(function (element) { element.setAttribute("aria-disabled", "true"); });
 
-    moveHistory.push({ board: cloneBoard(board), moveCount: moveCount });
-    if (move.type !== "column-group" && move.type !== "to-reserve" && move.type !== "from-reserve") playSound("move");
-    if (move.type === "column-group") await animateGroupMove(move);
-    else await animateMove(move);
-
-    if (move.type === "column-group") {
-      announce("已将顶部 " + move.count + " 个图案一起移入目标列。");
-    } else if (move.type === "to-reserve") {
-      announce("已暂存一个图案。");
-    } else {
-      announce("图案已放回列中。");
-    }
-
-    moveCount += 1;
-    selected = null;
-    render();
-    if (move.type !== "column-group") {
-      let landedElement = null;
-      if (move.target.kind === "column") {
-        const landedColumn = board.columns[move.target.index];
-        landedElement = elementsForColumnLevels(move.target.index, landedColumn.length - 1, 1)[0] || null;
-      } else {
-        const reserveButton = ui.reserveSlots.querySelector('[data-kind="reserve"][data-index="' + move.target.index + '"]');
-        landedElement = reserveButton ? reserveButton.querySelector(".reserve-glyph") : null;
+      if (move.type !== "column-group" && move.type !== "to-reserve" && move.type !== "from-reserve") playSound("move");
+      const didMove = move.type === "column-group"
+        ? await animateGroupMove(move)
+        : await animateMove(move);
+      if (!didMove) {
+        selected = null;
+        announce("移动没有完成，请再试一次。");
+        return;
       }
-      await animateLandingCell(landedElement, window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+      moveHistory.push({ board: previousBoard, moveCount: previousMoveCount });
+      moveCount = previousMoveCount + 1;
+      selected = null;
+      committed = true;
+      if (move.type === "column-group") {
+        announce("已将顶部 " + move.count + " 个图案一起移入目标列。");
+      } else if (move.type === "to-reserve") {
+        announce("已暂存一个图案。");
+      } else {
+        announce("图案已放回列中。");
+      }
+      render();
+      if (move.type !== "column-group") {
+        let landedElement = null;
+        if (move.target.kind === "column") {
+          const landedColumn = board.columns[move.target.index];
+          landedElement = elementsForColumnLevels(move.target.index, landedColumn.length - 1, 1)[0] || null;
+        } else {
+          const reserveButton = ui.reserveSlots.querySelector('[data-kind="reserve"][data-index="' + move.target.index + '"]');
+          landedElement = reserveButton ? reserveButton.querySelector(".reserve-glyph") : null;
+        }
+        await animateLandingCell(landedElement, window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      }
+    } catch (error) {
+      if (!committed) {
+        board = previousBoard;
+        moveCount = previousMoveCount;
+        ui.flightLayer.replaceChildren();
+        ui.columns.querySelectorAll(".is-flying").forEach(function (element) { element.classList.remove("is-flying"); });
+        ui.reserveSlots.querySelectorAll(".is-flying").forEach(function (element) { element.classList.remove("is-flying"); });
+        selected = null;
+        render();
+        announce("移动没有完成，棋盘已恢复，请再试一次。");
+      }
+    } finally {
+      isAnimating = false;
+      ui.columns.classList.remove("is-animating");
+      ui.reserveSlots.classList.remove("is-animating");
+      ui.columns.querySelectorAll(".column").forEach(function (element) { element.removeAttribute("aria-disabled"); });
+      ui.reserveSlots.querySelectorAll(".reserve-slot").forEach(function (element) { element.removeAttribute("aria-disabled"); });
+      ui.themeSelect.disabled = false;
+      ui.settingsButton.disabled = false;
+      ui.campaignButton.disabled = false;
+      ui.newGameButton.disabled = false;
+      ui.restartButton.disabled = false;
+      ui.shuffleButton.disabled = false;
+      render();
     }
-    isAnimating = false;
-    ui.columns.classList.remove("is-animating");
-    ui.reserveSlots.classList.remove("is-animating");
-    ui.themeSelect.disabled = false;
-    ui.settingsButton.disabled = false;
-    ui.campaignButton.disabled = false;
-    ui.newGameButton.disabled = false;
-    ui.restartButton.disabled = false;
-    ui.shuffleButton.disabled = false;
+
+    if (!committed) return;
     const won = isVictory();
     if (won && campaignMode && campaignLevel < CAMPAIGN_LEVEL_COUNT) {
       campaignUnlockedLevel = Math.max(campaignUnlockedLevel, campaignLevel + 1);
     }
-    render();
     persistLocalData(true);
     if (won) {
       announce("整理完成！所有图案都回到了自己的列里。");
