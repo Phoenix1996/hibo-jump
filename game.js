@@ -777,6 +777,7 @@
   function scrambleQuality(columns, capacity) {
     let score = 0;
     let largestRun = 0;
+    let longRunPenalty = 0;
     let solvedColumns = 0;
     columns.forEach(function (column) {
       if (!column.length) return;
@@ -784,8 +785,13 @@
       let previousPattern = null;
       let runLength = 0;
       let runCount = 0;
+      function scoreRun(length) {
+        const excess = length - 2;
+        if (excess > 0) longRunPenalty += excess * excess;
+      }
       column.forEach(function (token) {
         if (isBlankToken(token)) {
+          scoreRun(runLength);
           previousPattern = null;
           runLength = 0;
           return;
@@ -795,17 +801,19 @@
         if (patternId === previousPattern) {
           runLength += 1;
         } else {
+          scoreRun(runLength);
           previousPattern = patternId;
           runLength = 1;
           runCount += 1;
         }
         largestRun = Math.max(largestRun, runLength);
       });
+      scoreRun(runLength);
       if (colors.size > 1) score += colors.size * 15;
       score += runCount * 3;
       if (columnIsSortedForCapacity(column, capacity)) solvedColumns += 1;
     });
-    return score - largestRun * 5 - solvedColumns * 60;
+    return score - largestRun * 5 - longRunPenalty * 2 - solvedColumns * 60;
   }
 
   function buildSolvableBoard(currentSettings) {
