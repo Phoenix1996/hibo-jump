@@ -170,6 +170,7 @@
   let dailyMode = false;
   let dailyChallengeDate = "";
   let dailyBest = null;
+  let dailyHistory = Object.create(null);
   let currentThemeId = "ocean";
   let board = null;
   let initialBoard = null;
@@ -225,6 +226,22 @@
     if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
     const date = new Date(value + "T00:00:00Z");
     return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }
+
+  function normalizeDailyHistory(source, legacyBest) {
+    const history = Object.create(null);
+    if (source && typeof source === "object" && !Array.isArray(source)) {
+      Object.keys(source).forEach(function (date) {
+        const moves = source[date];
+        if (isValidDateKey(date) && Number.isInteger(moves) && moves > 0) history[date] = moves;
+      });
+    }
+    if (legacyBest && isValidDateKey(legacyBest.date) && Number.isInteger(legacyBest.moves) && legacyBest.moves > 0) {
+      if (!history[legacyBest.date] || legacyBest.moves < history[legacyBest.date]) {
+        history[legacyBest.date] = legacyBest.moves;
+      }
+    }
+    return history;
   }
 
   function formatDateKey(value) {
@@ -482,6 +499,7 @@
       Number.isInteger(stored.dailyBest.moves) && stored.dailyBest.moves > 0
       ? { date: stored.dailyBest.date, moves: stored.dailyBest.moves }
       : null;
+    dailyHistory = normalizeDailyHistory(stored.dailyHistory, dailyBest);
     activeSaveId = Math.max(0, Math.min(SAVE_SLOT_COUNT - 1, Number.parseInt(stored.activeSaveId, 10) || 0));
     saveSlots = Array.from({ length: SAVE_SLOT_COUNT }, function (_, index) {
       return normalizeSnapshot(Array.isArray(stored.saveSlots) ? stored.saveSlots[index] : null);
@@ -503,6 +521,7 @@
       vibrationEnabled: vibrationEnabled,
       campaignUnlockedLevel: campaignUnlockedLevel,
       dailyBest: dailyBest,
+      dailyHistory: dailyHistory,
       saveSlots: saveSlots.map(function (snapshot) {
         if (!snapshot) return null;
         const storedSnapshot = Object.assign({}, snapshot);
@@ -594,11 +613,14 @@
   function renderCampaignLevels() {
     const today = localDateKey();
     const dailyActive = dailyMode && dailyChallengeDate === today;
-    const hasDailyBest = dailyBest && dailyBest.date === today;
+    const todayBest = dailyHistory[today];
+    const completedDailyDays = Object.keys(dailyHistory).length;
     ui.dailyChallengeDate.textContent = formatDateKey(today);
-    ui.dailyChallengeMeta.textContent = hasDailyBest
-      ? "本日最佳 " + dailyBest.moves + " 步 · 今天棋盘固定"
-      : "每天更新 · 同日玩家玩同一盘";
+    ui.dailyChallengeMeta.textContent = todayBest
+      ? "本日最佳 " + todayBest + " 步 · 累计通关 " + completedDailyDays + " 天"
+      : completedDailyDays
+        ? "每日更新 · 已通关 " + completedDailyDays + " 天"
+        : "每天更新 · 同日玩家玩同一盘";
     ui.dailyChallengeAction.textContent = dailyActive ? "重开今日" : "开始挑战";
     ui.dailyChallengeButton.setAttribute("aria-label", dailyActive
       ? "重开 " + formatDateKey(today) + " 的每日挑战"
@@ -1858,9 +1880,9 @@
     persistLocalData(true);
     if (won) {
       if (dailyMode && dailyChallengeDate) {
-        if (!dailyBest || dailyBest.date !== dailyChallengeDate || moveCount < dailyBest.moves) {
-          dailyBest = { date: dailyChallengeDate, moves: moveCount };
-        }
+        const previousBest = dailyHistory[dailyChallengeDate];
+        if (!previousBest || moveCount < previousBest) dailyHistory[dailyChallengeDate] = moveCount;
+        dailyBest = { date: dailyChallengeDate, moves: dailyHistory[dailyChallengeDate] };
         persistLocalData(true);
         renderCampaignLevels();
         announce("每日挑战完成！本局 " + moveCount + " 步" + (dailyBest.date === dailyChallengeDate ? "，个人最佳 " + dailyBest.moves + " 步。" : "。"));
