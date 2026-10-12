@@ -262,7 +262,7 @@ h1, h2, h3, p { margin-top: 0; }
 .game-footer { display: flex; min-height: 74px; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 30px 18px; }
 .game-message-wrap { display: flex; min-width: 0; align-items: center; gap: 9px; }
 .message-mark { flex: 0 0 auto; color: #56a997; font-size: 16px; }
-.game-message-wrap p { margin: 0; color: #758d8c; font-size: 11px; line-height: 1.5; }
+.game-message-wrap p { min-width: 0; flex: 1 1 auto; margin: 0; color: #758d8c; font-size: 11px; line-height: 1.5; }
 .cancel-selection { flex: 0 0 auto; padding: 5px 8px; border: 0; border-radius: 9px; background: #edf6f1; color: #438579; cursor: pointer; font-size: 10px; font-weight: 700; }
 .game-actions { display: flex; flex: 0 0 auto; gap: 8px; }
 .secondary-button, .primary-button {
@@ -636,9 +636,9 @@ h1, h2, h3, p { margin-top: 0; }
   .game-actions #restartButton, .game-actions #saveButton, .game-actions #newGameButton { border-color: #e2ece6; background: #fff; color: #64807e; box-shadow: none; }
   .game-actions #newGameButton { color: #fff; background: linear-gradient(135deg,#3fae9b,#157b76); box-shadow: 0 6px 14px rgba(27,123,111,.17); }
   .game-footer { align-items: stretch; }
-  .stats { width: 100%; justify-content: center; }
-  .stat-chip { min-width: 0; flex: 0 0 auto; gap: 5px; padding: 2px 8px; border-radius: 9px; }
-  .stat-icon { width: 17px; height: 17px; border-radius: 6px; font-size: 9px; }
+  .stats { width: auto; flex: 0 0 auto; justify-content: center; }
+  .stat-chip { min-width: 0; flex: 0 0 auto; gap: 4px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+  .stat-icon { width: 13px; height: 13px; border-radius: 4px; font-size: 8px; }
   .stat-copy { display: flex; align-items: baseline; gap: 4px; }
   .stat-copy small { font-size: 8px; }
   .stat-copy strong { font-size: 10px; }
