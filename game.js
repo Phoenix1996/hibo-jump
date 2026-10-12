@@ -180,6 +180,7 @@
 
   function columnIsSortedForCapacity(column, capacity) {
     if (!column || column.length !== capacity) return false;
+    if (column.some(isMysteryToken)) return false;
     const patternTokens = column.filter(function (token) { return !isBlankToken(token); });
     if (!patternTokens.length) return false;
     const targetPattern = actualPatternId(patternTokens[0]);
@@ -378,8 +379,8 @@
       ? (vibrationEnabled ? "关闭移动震动" : "开启移动震动")
       : "此浏览器不支持移动震动");
     ui.vibrationHint.textContent = vibrationSupported
-      ? "图案落入格子时轻震一下"
-      : "当前浏览器不支持震动";
+      ? "图案落格时双震；请确认手机系统震动已开启"
+      : "当前网页浏览器未开放手机震动功能";
   }
 
   function formatSaveDate(timestamp) {
@@ -507,31 +508,49 @@
     }
   }
 
-  function playSound(kind, variant) {
-    if (!soundEnabled) return;
+  function prepareAudioContext() {
+    if (!soundEnabled) return null;
     const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextConstructor) return;
+    if (!AudioContextConstructor) return null;
     try {
       if (!audioContext) audioContext = new AudioContextConstructor();
-      if (audioContext.state === "suspended") audioContext.resume();
+      if (audioContext.state === "suspended") {
+        const resume = audioContext.resume();
+        if (resume && typeof resume.catch === "function") resume.catch(function () {});
+      }
+      return audioContext;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function playSound(kind, variant) {
+    if (!soundEnabled) return;
+    const context = prepareAudioContext();
+    if (!context) return;
+    try {
+      const tileNotes = [392, 440, 523.25, 587.33, 659.25, 783.99, 880];
+      const tileIndex = kind === "tile"
+        ? Math.max(0, getTheme().patterns.findIndex(function (pattern) { return pattern.id === actualPatternId(variant); }))
+        : 0;
       const notes = kind === "win" ? [523.25, 659.25, 783.99, 1046.5] :
         kind === "wrong" ? [246.94, 196] :
         kind === "stash" ? [493.88] :
         kind === "reveal" ? [587.33, 783.99] :
-        kind === "tile" ? [392 + ((Number(variant) || 0) % 7) * 46] : [659.25];
+        kind === "tile" ? [tileNotes[tileIndex % tileNotes.length]] : [659.25];
       const peakVolume = kind === "win" ? 0.055 : kind === "tile" ? 0.018 : 0.035;
       const noteLength = kind === "win" ? 0.28 : kind === "tile" ? 0.085 : 0.16;
       notes.forEach(function (frequency, index) {
-        const start = audioContext.currentTime + index * (kind === "win" ? 0.115 : 0.07);
-        const oscillator = audioContext.createOscillator();
-        const gain = audioContext.createGain();
+        const start = context.currentTime + index * (kind === "win" ? 0.115 : 0.07);
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
         oscillator.type = kind === "wrong" ? "triangle" : "sine";
         oscillator.frequency.setValueAtTime(frequency, start);
         gain.gain.setValueAtTime(0.0001, start);
         gain.gain.exponentialRampToValueAtTime(peakVolume, start + 0.012);
         gain.gain.exponentialRampToValueAtTime(0.0001, start + noteLength);
         oscillator.connect(gain);
-        gain.connect(audioContext.destination);
+        gain.connect(context.destination);
         oscillator.start(start);
         oscillator.stop(start + noteLength + 0.015);
       });
@@ -542,7 +561,12 @@
 
   function vibrateOnLanding() {
     if (!vibrationEnabled || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
-    try { navigator.vibrate(12); } catch (error) {}
+    try {
+      const accepted = navigator.vibrate([32, 18, 42]);
+      if (!accepted) ui.vibrationHint.textContent = "设备未接受震动请求，请检查系统设置";
+    } catch (error) {
+      ui.vibrationHint.textContent = "设备未接受震动请求，请检查系统设置";
+    }
   }
 
   function clearCelebration() {
@@ -629,7 +653,10 @@
 
   function buildSolvableBoard(currentSettings) {
     const fixedCount = Math.min(currentSettings.fixedCount, currentSettings.capacity - 1, currentSettings.patternCount);
-    const attemptCount = currentSettings.difficulty === "hard" ? 3 : 1;
+    // Compare several solvable reverse walks so hard boards are less likely to leave
+    // large same-pattern runs connected just because one shuffle happened to do so.
+    const attemptCount = currentSettings.difficulty === "hard" ? 12 : 1;
+    const reverseLookback = Math.min(16, Math.max(10, currentSettings.patternCount * 2));
     let bestColumns = null;
     let bestQuality = -Infinity;
 
@@ -690,7 +717,7 @@
         const group = donor.splice(donor.length - chosen.count, chosen.count);
         columns[chosen.targetIndex].push.apply(columns[chosen.targetIndex], group);
         recentReverseMoves.push(chosen);
-        if (recentReverseMoves.length > 5) recentReverseMoves.shift();
+        if (recentReverseMoves.length > reverseLookback) recentReverseMoves.shift();
       }
 
       const alreadySolved = columns.filter(function (column) {
@@ -741,7 +768,8 @@
   }
 
   function isVictory() {
-    if (!board || board.reserve.some(function (item) { return item !== null; })) return false;
+    if (!board || board.reserve.some(function (item) { return item !== null; }) ||
+        board.columns.some(function (column) { return column.some(isMysteryToken); })) return false;
     const completed = board.columns.filter(columnIsSorted);
     const emptyColumns = board.columns.filter(function (column) { return column.length === 0; });
     return completed.length === settings.patternCount && emptyColumns.length === 1;
@@ -764,14 +792,97 @@
   function flightKeyframes(sourceRect, targetRect) {
     const deltaX = targetRect.left - sourceRect.left;
     const deltaY = targetRect.top - sourceRect.top;
-    const lift = sourceRect.height + 6;
+    const lift = Math.max(sourceRect.height * 0.9, Math.min(88, Math.abs(deltaX) * 0.12 + Math.abs(deltaY) * 0.08));
+    const turn = deltaX === 0 ? 0 : Math.sign(deltaX) * 5;
     return [
-      { transform: "translate(0px, 0px)", offset: 0 },
-      { transform: "translate(0px, " + (-lift) + "px)", offset: 0.16 },
-      { transform: "translate(" + deltaX + "px, " + (deltaY - lift) + "px)", offset: 0.72 },
-      { transform: "translate(" + deltaX + "px, " + (deltaY - sourceRect.height * .35) + "px)", offset: 0.9 },
-      { transform: "translate(" + deltaX + "px, " + deltaY + "px)", offset: 1 }
+      { transform: "translate3d(0, 0, 0) scale(1) rotate(0deg)", filter: "drop-shadow(0 2px 2px rgba(36, 70, 68, .13))", offset: 0 },
+      { transform: "translate3d(0, " + (-lift) + "px, 0) scale(1.07) rotate(" + (-turn) + "deg)", filter: "drop-shadow(0 10px 7px rgba(36, 70, 68, .2))", offset: 0.16 },
+      { transform: "translate3d(" + (deltaX * 0.52) + "px, " + (deltaY * 0.52 - lift * 1.15) + "px, 0) scale(1.08) rotate(" + turn + "deg)", filter: "drop-shadow(0 10px 7px rgba(36, 70, 68, .18))", offset: 0.56 },
+      { transform: "translate3d(" + (deltaX * 0.88) + "px, " + (deltaY * 0.88 - lift * 0.36) + "px, 0) scale(.99) rotate(" + (turn * 0.35) + "deg)", offset: 0.84 },
+      { transform: "translate3d(" + deltaX + "px, " + (deltaY + 3) + "px, 0) scale(1.04, .94) rotate(0deg)", offset: 0.94 },
+      { transform: "translate3d(" + deltaX + "px, " + deltaY + "px, 0) scale(1) rotate(0deg)", filter: "drop-shadow(0 3px 4px rgba(36, 70, 68, .12))", offset: 1 }
     ];
+  }
+
+  function flightDuration(sourceRect, targetRect, reducedMotion) {
+    if (reducedMotion) return 90;
+    const distance = Math.hypot(targetRect.left - sourceRect.left, targetRect.top - sourceRect.top);
+    return Math.max(250, Math.min(360, 235 + distance * 0.16));
+  }
+
+  async function animateFlightTile(tile, sourceRect, targetRect, reducedMotion) {
+    const image = tile.querySelector("img");
+    if (image && typeof image.decode === "function") await image.decode().catch(function () {});
+    const duration = flightDuration(sourceRect, targetRect, reducedMotion);
+    const deltaX = targetRect.left - sourceRect.left;
+    const deltaY = targetRect.top - sourceRect.top;
+    if (typeof tile.animate === "function") {
+      const keyframes = reducedMotion
+        ? [{ transform: "translate3d(0, 0, 0)" }, { transform: "translate3d(" + deltaX + "px, " + deltaY + "px, 0)" }]
+        : flightKeyframes(sourceRect, targetRect);
+      const animation = tile.animate(keyframes, {
+        duration: duration,
+        easing: reducedMotion ? "ease-out" : "cubic-bezier(.18,.78,.22,1)",
+        fill: "forwards"
+      });
+      await animation.finished.catch(function () {});
+      return;
+    }
+
+    tile.style.transition = "transform " + duration + "ms cubic-bezier(.18,.78,.22,1)";
+    await new Promise(function (resolve) {
+      window.requestAnimationFrame(function () {
+        tile.style.transform = "translate3d(" + deltaX + "px, " + deltaY + "px, 0)";
+        window.setTimeout(resolve, duration);
+      });
+    });
+  }
+
+  async function revealFlightTile(tile, patternId, sourceRect, targetRect, reducedMotion) {
+    if (!isMysteryToken(patternId)) return;
+    const deltaX = targetRect.left - sourceRect.left;
+    const deltaY = targetRect.top - sourceRect.top;
+    const travel = "perspective(700px) translate3d(" + deltaX + "px, " + deltaY + "px, 0) ";
+    const duration = reducedMotion ? 70 : 170;
+    if (typeof tile.animate === "function") {
+      const close = tile.animate([
+        { transform: travel + "rotateY(0deg) scale(1)", opacity: 1 },
+        { transform: travel + "rotateY(88deg) scale(.92)", opacity: .82 }
+      ], { duration: duration / 2, easing: "ease-in", fill: "forwards" });
+      await close.finished.catch(function () {});
+    }
+
+    const pattern = getPattern(actualPatternId(patternId));
+    tile.classList.remove("mystery-hidden");
+    if (pattern.image) tile.classList.add("has-art");
+    else tile.classList.remove("has-art");
+    tile.style.setProperty("--pattern-color", pattern.color);
+    tile.innerHTML = patternVisualHtml(pattern);
+
+    if (typeof tile.animate === "function") {
+      const image = tile.querySelector("img");
+      if (image && typeof image.decode === "function") await image.decode().catch(function () {});
+      const open = tile.animate([
+        { transform: travel + "rotateY(-88deg) scale(.92)", opacity: .82 },
+        { transform: travel + "rotateY(0deg) scale(1)", opacity: 1 }
+      ], { duration: duration / 2, easing: "cubic-bezier(.2,.8,.25,1)", fill: "forwards" });
+      await open.finished.catch(function () {});
+    }
+  }
+
+  async function animateLandingCell(cell, reducedMotion) {
+    if (!cell || typeof cell.animate !== "function") return;
+    const animation = cell.animate([
+      { transform: "scale(1)" },
+      { transform: "scale(1.045, .96)", offset: .48 },
+      { transform: "scale(.985, 1.025)", offset: .72 },
+      { transform: "scale(1)" }
+    ], {
+      duration: reducedMotion ? 75 : 135,
+      easing: "cubic-bezier(.2,.75,.25,1)",
+      fill: "none"
+    });
+    await animation.finished.catch(function () {});
   }
 
   function centeredFlightRect(sourceRect, targetRect) {
@@ -792,7 +903,7 @@
 
   function patternVisualHtml(pattern) {
     if (!pattern.image) return escapeHtml(pattern.glyph);
-    return '<img class="pattern-art" src="' + escapeHtml(encodeURI(pattern.image)) + '" alt="' +
+    return '<img class="pattern-art" src="' + escapeHtml(encodeURI(pattern.image)) + '" loading="lazy" decoding="async" alt="' +
       escapeHtml(pattern.glyph) + '" draggable="false">';
   }
 
@@ -820,7 +931,8 @@
       : board.reserve[source.index];
     if (!movingCount || !sourcePattern) return false;
     if (target.length + movingCount > settings.capacity) return false;
-    return true;
+    const targetPattern = target.length ? actualPatternId(target[target.length - 1]) : null;
+    return !targetPattern || actualPatternId(sourcePattern) === targetPattern;
   }
 
   function targetIsValid(source, targetKind, targetIndex) {
@@ -1055,8 +1167,6 @@
     const toElements = destinationElements(move).filter(Boolean);
     if (!fromElements.length || !toElements.length) return;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const duration = reducedMotion ? 80 : 300;
-    const animations = [];
     for (let step = 0; step < fromElements.length; step += 1) {
       const index = fromElements.length - 1 - step;
       const source = fromElements[index];
@@ -1065,24 +1175,21 @@
       const targetRect = centeredFlightRect(sourceRect, destination.getBoundingClientRect());
       const flight = createFlightTile(move.patternIds[index], sourceRect);
       source.classList.add("is-flying");
-      if (typeof flight.animate === "function") {
-        const animation = flight.animate(flightKeyframes(sourceRect, targetRect), {
-          duration: duration, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards"
-        });
-        animations.push(animation.finished.catch(function () {}));
-      } else {
-        animations.push(new Promise(function (resolve) { window.setTimeout(resolve, duration); }));
-      }
+      if (move.target.kind === "reserve") destination.classList.add("is-flying");
+      await animateFlightTile(flight, sourceRect, targetRect, reducedMotion);
+      await revealFlightTile(flight, move.patternIds[index], sourceRect, targetRect, reducedMotion);
+      flight.remove();
+      source.classList.remove("is-flying");
+      destination.classList.remove("is-flying");
+      playSound("tile", move.patternIds[index]);
+      vibrateOnLanding();
     }
-    await Promise.all(animations);
     ui.flightLayer.innerHTML = "";
     fromElements.forEach(function (element) { element.classList.remove("is-flying"); });
-    vibrateOnLanding();
   }
 
   async function animateGroupMove(move) {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const duration = reducedMotion ? 80 : 300;
     const sourceIndex = move.source.index;
     const targetIndex = move.target.index;
 
@@ -1095,7 +1202,6 @@
       );
       const sourceRect = sourceCell ? sourceCell.getBoundingClientRect() : null;
       const token = sourceColumn.pop();
-      playSound("tile", step);
       targetColumn.push(actualPatternId(token));
       const revealedLevel = sourceColumn.length - 1;
       const revealedMystery = revealedLevel >= 0 && isMysteryToken(sourceColumn[revealedLevel]);
@@ -1121,25 +1227,20 @@
 
       const flight = createFlightTile(token, sourceRect);
       targetCell.classList.add("is-flying");
-      const pendingAnimations = [];
-      if (revealAnimation) pendingAnimations.push(revealAnimation.finished.catch(function () {}));
-      if (typeof flight.animate === "function") {
-        const animation = flight.animate(flightKeyframes(sourceRect, targetRect), {
-          duration: duration, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards"
-        });
-        pendingAnimations.push(animation.finished.catch(function () {}));
-      } else {
-        pendingAnimations.push(new Promise(function (resolve) { window.setTimeout(resolve, duration); }));
-      }
-      await Promise.all(pendingAnimations);
+      if (revealAnimation) await revealAnimation.finished.catch(function () {});
+      await animateFlightTile(flight, sourceRect, targetRect, reducedMotion);
+      await revealFlightTile(flight, token, sourceRect, targetRect, reducedMotion);
       flight.remove();
       targetCell.classList.remove("is-flying");
+      playSound("tile", token);
       vibrateOnLanding();
+      await animateLandingCell(targetCell, reducedMotion);
     }
   }
 
   async function performMove(move) {
     if (isAnimating) return;
+    prepareAudioContext();
     isAnimating = true;
     ui.columns.classList.add("is-animating");
     ui.reserveSlots.classList.add("is-animating");
@@ -1155,7 +1256,7 @@
     ui.reserveSlots.querySelectorAll(".reserve-slot").forEach(function (element) { element.setAttribute("aria-disabled", "true"); });
 
     moveHistory.push({ board: cloneBoard(board), moveCount: moveCount });
-    if (move.type !== "column-group") playSound(move.type === "to-reserve" || move.type === "from-reserve" ? "stash" : "move");
+    if (move.type !== "column-group" && move.type !== "to-reserve" && move.type !== "from-reserve") playSound("move");
     if (move.type === "column-group") await animateGroupMove(move);
     else await animateMove(move);
 
@@ -1175,6 +1276,18 @@
 
     moveCount += 1;
     selected = null;
+    render();
+    if (move.type !== "column-group") {
+      let landedElement = null;
+      if (move.target.kind === "column") {
+        const landedColumn = board.columns[move.target.index];
+        landedElement = elementsForColumnLevels(move.target.index, landedColumn.length - 1, 1)[0] || null;
+      } else {
+        const reserveButton = ui.reserveSlots.querySelector('[data-kind="reserve"][data-index="' + move.target.index + '"]');
+        landedElement = reserveButton ? reserveButton.querySelector(".reserve-glyph") : null;
+      }
+      await animateLandingCell(landedElement, window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    }
     isAnimating = false;
     ui.columns.classList.remove("is-animating");
     ui.reserveSlots.classList.remove("is-animating");
@@ -1387,6 +1500,9 @@
   });
   ui.vibrationToggle.addEventListener("change", function () {
     vibrationEnabled = ui.vibrationToggle.checked;
+    if (vibrationEnabled && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      try { navigator.vibrate([30, 24, 42]); } catch (error) {}
+    }
     persistLocalData(false);
   });
   ui.saveButton.addEventListener("click", openSaveDialog);
