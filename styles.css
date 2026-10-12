@@ -603,6 +603,7 @@ h1, h2, h3, p { margin-top: 0; }
   .settings-button { box-shadow: none; }
   .game-card { border: 1px solid rgba(255,255,255,.96); border-radius: 20px; background: var(--card); box-shadow: var(--shadow); backdrop-filter: blur(16px); }
   .game-title-row h2 { color: var(--ink); text-shadow: none; }
+  .game-title-row h2 { display: none; }
   .level-badge { background: #e9f5ef; color: #438174; }
   .stat-chip { border-color: #ecf1ed; background: #fbfdfb; }
   .board-surface { border-color: #edf3ef; background: linear-gradient(180deg,#fbfdfb 0%,#f8fbf8 100%); box-shadow: none; backdrop-filter: none; }
@@ -615,7 +616,7 @@ h1, h2, h3, p { margin-top: 0; }
   .column-stack { height: 100%; border-color: #dcebe5; background: linear-gradient(180deg,#edf7f2,#e5f1eb); box-shadow: inset 0 2px 5px rgba(63,111,94,.055),0 5px 12px rgba(45,91,81,.055); }
   .column.is-empty .column-stack { border-style: dashed; background: rgba(226,240,233,.47); }
   .reserve-section { padding-top: 5px; border-color: #d7e8e0; background: rgba(236,246,240,.6); }
-  .reserve-heading { justify-content: center; margin-bottom: 3px; }
+  .reserve-heading { display: none; }
   .reserve-heading h3 { color: #31535a; }
   .reserve-heading p { display: none; }
   .reserve-slots { justify-content: center; }
@@ -634,6 +635,13 @@ h1, h2, h3, p { margin-top: 0; }
   .game-actions #undoButton { border-color: #f0d7e3; background: #fff0f6; color: #bd6b91; }
   .game-actions #restartButton, .game-actions #saveButton, .game-actions #newGameButton { border-color: #e2ece6; background: #fff; color: #64807e; box-shadow: none; }
   .game-actions #newGameButton { color: #fff; background: linear-gradient(135deg,#3fae9b,#157b76); box-shadow: 0 6px 14px rgba(27,123,111,.17); }
+  .game-footer { align-items: stretch; }
+  .stats { width: 100%; justify-content: center; }
+  .stat-chip { min-width: 0; flex: 0 0 auto; gap: 5px; padding: 2px 8px; border-radius: 9px; }
+  .stat-icon { width: 17px; height: 17px; border-radius: 6px; font-size: 9px; }
+  .stat-copy { display: flex; align-items: baseline; gap: 4px; }
+  .stat-copy small { font-size: 8px; }
+  .stat-copy strong { font-size: 10px; }
   .victory-banner { border-color: #cfe9d9; background: linear-gradient(100deg,#e4f7e9,#f8f8e8); }
 }
 
