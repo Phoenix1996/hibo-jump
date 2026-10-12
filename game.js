@@ -826,12 +826,27 @@
         availablePatterns[index] = availablePatterns[swapIndex];
         availablePatterns[swapIndex] = value;
       }
-      const blankPatternIds = new Set(availablePatterns.slice(0, fixedCount).map(function (index) { return "p" + index; }));
+      // Fixed blanks represent missing tiles. Randomly group them into one to N
+      // pattern columns so multiple blanks can share a column on some boards.
+      const blankPatternCount = fixedCount ? randomIndex(fixedCount) + 1 : 0;
+      const blankCountsByPattern = new Map();
+      availablePatterns.slice(0, blankPatternCount).forEach(function (index) {
+        blankCountsByPattern.set("p" + index, 1);
+      });
+      for (let blankIndex = blankPatternCount; blankIndex < fixedCount; blankIndex += 1) {
+        const eligiblePatterns = Array.from(blankCountsByPattern.keys()).filter(function (patternId) {
+          return blankCountsByPattern.get(patternId) < currentSettings.capacity - 1;
+        });
+        const patternId = eligiblePatterns[randomIndex(eligiblePatterns.length)];
+        blankCountsByPattern.set(patternId, blankCountsByPattern.get(patternId) + 1);
+      }
       const columns = [];
       for (let patternIndex = 0; patternIndex < currentSettings.patternCount; patternIndex += 1) {
         const patternId = "p" + (patternIndex + 1);
         const column = [];
-        if (blankPatternIds.has(patternId)) column.push("blank");
+        for (let blankIndex = 0; blankIndex < (blankCountsByPattern.get(patternId) || 0); blankIndex += 1) {
+          column.push("blank");
+        }
         while (column.length < currentSettings.capacity) column.push(patternId);
         columns.push(column);
       }
@@ -900,18 +915,31 @@
 
     const columns = bestColumns || [[]];
 
-    const mysteryCandidates = [];
+    const mysteryCandidatesByNeighborMatches = [[], [], []];
     columns.forEach(function (column, columnIndex) {
       for (let level = 0; level < column.length - 1; level += 1) {
-        if (!isFixedToken(column[level])) mysteryCandidates.push({ columnIndex: columnIndex, level: level });
+        const token = column[level];
+        if (isFixedToken(token)) continue;
+        const patternId = actualPatternId(token);
+        let matchingNeighbors = 0;
+        [level - 1, level + 1].forEach(function (neighborLevel) {
+          if (neighborLevel >= 0 && neighborLevel < column.length &&
+              !isFixedToken(column[neighborLevel]) &&
+              actualPatternId(column[neighborLevel]) === patternId) matchingNeighbors += 1;
+        });
+        mysteryCandidatesByNeighborMatches[matchingNeighbors].push({ columnIndex: columnIndex, level: level });
       }
     });
-    for (let index = mysteryCandidates.length - 1; index > 0; index -= 1) {
-      const swapIndex = randomIndex(index + 1);
-      const candidate = mysteryCandidates[index];
-      mysteryCandidates[index] = mysteryCandidates[swapIndex];
-      mysteryCandidates[swapIndex] = candidate;
-    }
+    const mysteryCandidates = [];
+    mysteryCandidatesByNeighborMatches.forEach(function (bucket) {
+      for (let index = bucket.length - 1; index > 0; index -= 1) {
+        const swapIndex = randomIndex(index + 1);
+        const candidate = bucket[index];
+        bucket[index] = bucket[swapIndex];
+        bucket[swapIndex] = candidate;
+      }
+      mysteryCandidates.push.apply(mysteryCandidates, bucket);
+    });
     mysteryCandidates.slice(0, Math.min(currentSettings.mysteryCount, mysteryCandidates.length)).forEach(function (candidate) {
       const column = columns[candidate.columnIndex];
       column[candidate.level] = "?" + actualPatternId(column[candidate.level]);
@@ -1257,7 +1285,7 @@
       : "关卡闯关，已解锁 " + campaignUnlockedLevel + " 关");
     const victoryButtonLabel = campaignMode && campaignLevel < CAMPAIGN_LEVEL_COUNT ? "下一关" : "再玩一局";
     if (ui.victoryButtonText.textContent !== victoryButtonLabel) ui.victoryButtonText.textContent = victoryButtonLabel;
-    ui.boardCaption.textContent = "每列最多 " + settings.capacity + " 格 · " + settings.shuffleSteps + " 步打乱" + (settings.fixedCount ? " · 固定白格会随机分散" : "");
+    ui.boardCaption.textContent = "每列最多 " + settings.capacity + " 格 · " + settings.shuffleSteps + " 步打乱" + (settings.fixedCount ? " · 白格可能出现在同一列" : "");
     ui.cancelSelectionButton.hidden = !selected || isAnimating;
     ui.victoryBanner.hidden = isAnimating || !isVictory();
     ui.undoButton.disabled = isAnimating || moveHistory.length === 0;
@@ -1776,10 +1804,10 @@
       ui.fixedCountInput
     ].forEach(function (input) { input.disabled = !isCustom; });
     if (isCustom) {
-      ui.difficultyHint.textContent = "自定义图案种类、列容量、暂存位、问号和打乱强度；固定白格会分散在不同列底部。";
+      ui.difficultyHint.textContent = "自定义图案种类、列容量、暂存位、问号和打乱强度；固定白格可能在同一列底部。";
     } else {
       const preset = PRESETS[ui.difficultySelect.value];
-      const fixedHint = preset.fixedCount ? "；固定白格分散在不同列底部" : "";
+      const fixedHint = preset.fixedCount ? "；固定白格可能在同一列底部" : "";
       ui.difficultyHint.textContent = preset.label + "：" + preset.shuffleSteps + " 步打乱 · " + preset.reserveCount + " 个暂存位" + fixedHint + "。";
     }
   }
