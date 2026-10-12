@@ -225,6 +225,7 @@ h1, h2, h3, p { margin-top: 0; }
   .column.is-selected .column-stack .tile.top-group { animation: selected-tile-float 720ms ease-in-out infinite; }
   @keyframes selected-tile-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 .column-stack .tile.is-flying, .reserve-slot .tile.is-flying { visibility: hidden; }
+.column-stack .tile.is-flight-source { visibility: hidden; }
 .column.is-invalid-flash .column-stack, .reserve-slot.is-invalid-flash { animation: nudge 260ms ease; }
 @keyframes nudge { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
 .column.is-empty .column-stack { border-style: dashed; background: rgba(226, 240, 233, .47); }
