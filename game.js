@@ -108,6 +108,8 @@
     shuffleStepsInput: document.getElementById("shuffleStepsInput"),
     mysteryCountInput: document.getElementById("mysteryCountInput"),
     fixedCountInput: document.getElementById("fixedCountInput"),
+    vibrationToggle: document.getElementById("vibrationToggle"),
+    vibrationHint: document.getElementById("vibrationHint"),
     undoButton: document.getElementById("undoButton"),
     shuffleButton: document.getElementById("shuffleButton"),
     flightLayer: document.getElementById("flightLayer"),
@@ -135,6 +137,7 @@
   let activeSaveId = 0;
   let saveSlots = new Array(SAVE_SLOT_COUNT).fill(null);
   let soundEnabled = true;
+  let vibrationEnabled = true;
   let audioContext = null;
   let victoryCelebrated = false;
   let storageAvailable = true;
@@ -324,6 +327,7 @@
     settings = normalizeSettings(stored.settings);
     currentThemeId = THEMES[stored.themeId] ? stored.themeId : "ocean";
     soundEnabled = stored.soundEnabled !== false;
+    vibrationEnabled = stored.vibrationEnabled !== false;
     activeSaveId = Math.max(0, Math.min(SAVE_SLOT_COUNT - 1, Number.parseInt(stored.activeSaveId, 10) || 0));
     saveSlots = Array.from({ length: SAVE_SLOT_COUNT }, function (_, index) {
       return normalizeSnapshot(Array.isArray(stored.saveSlots) ? stored.saveSlots[index] : null);
@@ -342,6 +346,7 @@
       settings: Object.assign({}, settings),
       themeId: currentThemeId,
       soundEnabled: soundEnabled,
+      vibrationEnabled: vibrationEnabled,
       saveSlots: saveSlots.map(function (snapshot) {
         if (!snapshot) return null;
         const storedSnapshot = Object.assign({}, snapshot);
@@ -366,6 +371,15 @@
     ui.soundToggle.setAttribute("aria-label", soundEnabled ? "关闭音效" : "开启音效");
     ui.soundToggle.title = soundEnabled ? "关闭音效" : "开启音效";
     ui.soundLabel.textContent = soundEnabled ? "音效" : "静音";
+    const vibrationSupported = typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+    ui.vibrationToggle.checked = vibrationEnabled;
+    ui.vibrationToggle.disabled = !vibrationSupported;
+    ui.vibrationToggle.setAttribute("aria-label", vibrationSupported
+      ? (vibrationEnabled ? "关闭移动震动" : "开启移动震动")
+      : "此浏览器不支持移动震动");
+    ui.vibrationHint.textContent = vibrationSupported
+      ? "图案落入格子时轻震一下"
+      : "当前浏览器不支持震动";
   }
 
   function formatSaveDate(timestamp) {
@@ -524,6 +538,11 @@
     } catch (error) {
       // Audio is optional; gameplay remains available if the browser blocks Web Audio.
     }
+  }
+
+  function vibrateOnLanding() {
+    if (!vibrationEnabled || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+    try { navigator.vibrate(12); } catch (error) {}
   }
 
   function clearCelebration() {
@@ -732,6 +751,38 @@
     ui.gameMessage.textContent = message;
   }
 
+  function nudgeTarget(targetKind, targetIndex) {
+    const container = targetKind === "column" ? ui.columns : ui.reserveSlots;
+    const target = container.querySelector('[data-kind="' + targetKind + '"][data-index="' + targetIndex + '"]');
+    if (!target) return;
+    target.classList.remove("is-invalid-flash");
+    void target.offsetWidth;
+    target.classList.add("is-invalid-flash");
+    window.setTimeout(function () { target.classList.remove("is-invalid-flash"); }, 300);
+  }
+
+  function flightKeyframes(sourceRect, targetRect) {
+    const deltaX = targetRect.left - sourceRect.left;
+    const deltaY = targetRect.top - sourceRect.top;
+    const lift = sourceRect.height + 6;
+    return [
+      { transform: "translate(0px, 0px)", offset: 0 },
+      { transform: "translate(0px, " + (-lift) + "px)", offset: 0.16 },
+      { transform: "translate(" + deltaX + "px, " + (deltaY - lift) + "px)", offset: 0.72 },
+      { transform: "translate(" + deltaX + "px, " + (deltaY - sourceRect.height * .35) + "px)", offset: 0.9 },
+      { transform: "translate(" + deltaX + "px, " + deltaY + "px)", offset: 1 }
+    ];
+  }
+
+  function centeredFlightRect(sourceRect, targetRect) {
+    return {
+      left: targetRect.left + (targetRect.width - sourceRect.width) / 2,
+      top: targetRect.top + (targetRect.height - sourceRect.height) / 2,
+      width: sourceRect.width,
+      height: sourceRect.height
+    };
+  }
+
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, function (character) {
       const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -807,16 +858,17 @@
           slots.push(
             '<span class="' + tileClass + '" ' +
             'data-pattern-id="' + (isHidden || isBlank ? "" : escapeHtml(pattern.id)) + '" data-level="' + level + '" ' +
-            'style="' + (isHidden || isBlank ? "" : '--pattern-color:' + escapeHtml(pattern.color)) + '" aria-hidden="true">' +
+            'style="grid-row:' + (settings.capacity - level) + ';' +
+              (isHidden || isBlank ? "" : '--pattern-color:' + escapeHtml(pattern.color) + ';') + '" aria-hidden="true">' +
             (isHidden ? "?" : (isBlank ? "" : patternVisualHtml(pattern))) + "</span>"
           );
         } else {
-          slots.push('<span class="stack-cell is-empty" data-level="' + level + '" aria-hidden="true"></span>');
+          slots.push('<span class="stack-cell is-empty" data-level="' + level + '" style="grid-row:' +
+            (settings.capacity - level) + '" aria-hidden="true"></span>');
         }
       }
 
       const isSelected = selected && selected.kind === "column" && selected.index === columnIndex;
-      const validTarget = selected && targetIsValid(selected, "column", columnIndex);
       const canDrag = !isComplete && topGroupSize(column) > 0;
       const title = column.length
         ? (isComplete ? "此列不能接收或移出图案" : (canDrag ? "移动顶部图案组" : "只有固定格，不能移动"))
@@ -824,12 +876,12 @@
       return (
         '<button class="column' + (column.length ? "" : " is-empty") +
           (isComplete ? " is-complete" : "") +
-          (isSelected ? " is-selected" : "") + (validTarget ? " is-target is-valid-target" : "") + '" ' +
+          (isSelected ? " is-selected" : "") + '" ' +
           'type="button" data-kind="column" data-index="' + columnIndex + '" draggable="' + canDrag + '" ' +
           'aria-label="' + escapeHtml(columnDescription(column, columnIndex)) + '" title="' + escapeHtml(title) + '">' +
           '<span class="column-meta"><span>列 ' + (columnIndex + 1) + '</span><span class="column-count">' +
           column.length + "/" + settings.capacity + '</span></span>' +
-          '<span class="column-stack">' + slots.join("") + "</span></button>"
+          '<span class="column-stack" style="--cell-count:' + settings.capacity + '">' + slots.join("") + "</span></button>"
       );
     }).join("");
 
@@ -837,19 +889,18 @@
       ui.reserveSection.hidden = false;
       ui.reserveSlots.innerHTML = board.reserve.map(function (patternId, reserveIndex) {
         const isSelected = selected && selected.kind === "reserve" && selected.index === reserveIndex;
-        const validTarget = selected && targetIsValid(selected, "reserve", reserveIndex);
         if (patternId) {
           const pattern = getPattern(patternId);
           return (
             '<button class="reserve-slot is-filled' + (isSelected ? " is-selected" : "") +
-              (validTarget ? " is-target is-valid-target" : "") + '" type="button" data-kind="reserve" data-index="' + reserveIndex + '" draggable="true" ' +
+              '" type="button" data-kind="reserve" data-index="' + reserveIndex + '" draggable="true" ' +
               'aria-label="暂存位 ' + (reserveIndex + 1) + "，" + escapeHtml(pattern.name) + '，点选后放回棋盘" title="点选后放回棋盘">' +
               '<span class="tile reserve-glyph' + (pattern.image ? " has-art" : "") + '" style="--pattern-color:' + escapeHtml(pattern.color) + '" aria-hidden="true">' +
                 patternVisualHtml(pattern) + "</span></button>"
           );
         }
         return (
-          '<button class="reserve-slot' + (validTarget ? " is-target is-valid-target" : "") + '" type="button" ' +
+          '<button class="reserve-slot" type="button" ' +
             'data-kind="reserve" data-index="' + reserveIndex + '" aria-label="暂存位 ' + (reserveIndex + 1) + "，空位" + '" title="空暂存位">' +
             '<span class="reserve-placeholder" aria-hidden="true">＋</span></button>'
         );
@@ -893,8 +944,8 @@
     }
     selected = { kind: kind, index: index };
     const description = kind === "column"
-      ? "已选第 " + (index + 1) + " 列。点目标列后，会按空位自动移动顶部图案。"
-      : "已选暂存位。点任一有空间的列，把图案放回去。";
+      ? "已选第 " + (index + 1) + " 列。再点一列试试。"
+      : "已选暂存位。再点一列试试。";
     announce(description);
     render();
   }
@@ -914,25 +965,7 @@
 
     const move = createMove(selected, { kind: targetKind, index: targetIndex });
     if (!move) {
-      if (targetKind === "reserve" && selected.kind === "column") {
-        announce("请选一个空暂存位。列顶的一个图案就能暂时放在这里。");
-      } else if (targetKind === "column") {
-        const target = board.columns[targetIndex];
-        if (selected.kind === "column" && selected.index === targetIndex) return;
-        if (columnIsSorted(target)) {
-          announce("这一列已经完成并锁定，不能移动或接收图案。");
-        } else if (selected.kind === "column") {
-          announce(target.length >= settings.capacity
-            ? "这一列已经满了，先找其他位置吧。"
-            : "当前没有可移动的顶部图案。");
-        } else if (target.length + 1 > settings.capacity) {
-          announce("这一列已经满了，先找其他位置吧。");
-        } else {
-          announce("目标列空间不足，放不下这个图案。");
-        }
-      } else {
-        announce("请先从列或有图案的暂存位开始选择。");
-      }
+      nudgeTarget(targetKind, targetIndex);
       return;
     }
 
@@ -1023,26 +1056,19 @@
     if (!fromElements.length || !toElements.length) return;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const duration = reducedMotion ? 80 : 300;
-    const lift = 18;
     const animations = [];
     for (let step = 0; step < fromElements.length; step += 1) {
       const index = fromElements.length - 1 - step;
       const source = fromElements[index];
       const destination = toElements[Math.min(index, toElements.length - 1)];
       const sourceRect = source.getBoundingClientRect();
-      const targetRect = destination.getBoundingClientRect();
+      const targetRect = centeredFlightRect(sourceRect, destination.getBoundingClientRect());
       const flight = createFlightTile(move.patternIds[index], sourceRect);
       source.classList.add("is-flying");
-      const deltaX = (targetRect.left + targetRect.width / 2) - (sourceRect.left + sourceRect.width / 2);
-      const deltaY = (targetRect.top + targetRect.height / 2) - (sourceRect.top + sourceRect.height / 2);
       if (typeof flight.animate === "function") {
-        const animation = flight.animate([
-          { transform: "translate(0px, 0px) scale(1)", offset: 0 },
-          { transform: "translate(0px, -" + lift + "px) scale(1.055)", offset: 0.16 },
-          { transform: "translate(" + deltaX + "px, -" + lift + "px) scale(1.04)", offset: 0.68 },
-          { transform: "translate(" + deltaX + "px, " + (deltaY - 5) + "px) scale(1.025)", offset: 0.9 },
-          { transform: "translate(" + deltaX + "px, " + deltaY + "px) scale(1)", offset: 1 }
-        ], { duration: duration, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards" });
+        const animation = flight.animate(flightKeyframes(sourceRect, targetRect), {
+          duration: duration, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards"
+        });
         animations.push(animation.finished.catch(function () {}));
       } else {
         animations.push(new Promise(function (resolve) { window.setTimeout(resolve, duration); }));
@@ -1051,6 +1077,7 @@
     await Promise.all(animations);
     ui.flightLayer.innerHTML = "";
     fromElements.forEach(function (element) { element.classList.remove("is-flying"); });
+    vibrateOnLanding();
   }
 
   async function animateGroupMove(move) {
@@ -1063,6 +1090,10 @@
       const sourceColumn = board.columns[sourceIndex];
       const targetColumn = board.columns[targetIndex];
       const sourceLevel = sourceColumn.length - 1;
+      const sourceCell = ui.columns.querySelector(
+        '[data-kind="column"][data-index="' + sourceIndex + '"] .stack-cell[data-level="' + sourceLevel + '"]'
+      );
+      const sourceRect = sourceCell ? sourceCell.getBoundingClientRect() : null;
       const token = sourceColumn.pop();
       playSound("tile", step);
       targetColumn.push(actualPatternId(token));
@@ -1070,13 +1101,6 @@
       const revealedMystery = revealedLevel >= 0 && isMysteryToken(sourceColumn[revealedLevel]);
       revealTopToken(sourceColumn);
       render();
-
-      // Measure both ends after the same render. This keeps a selected column's
-      // floating top-group animation from shifting the flight's starting point.
-      const sourceCell = ui.columns.querySelector(
-        '[data-kind="column"][data-index="' + sourceIndex + '"] .stack-cell[data-level="' + sourceLevel + '"]'
-      );
-      const sourceRect = sourceCell ? sourceCell.getBoundingClientRect() : null;
 
       const revealedCell = revealedMystery ? ui.columns.querySelector(
         '[data-kind="column"][data-index="' + sourceIndex + '"] .stack-cell[data-level="' + revealedLevel + '"]'
@@ -1091,24 +1115,18 @@
       const targetCell = ui.columns.querySelector(
         '[data-kind="column"][data-index="' + targetIndex + '"] .stack-cell[data-level="' + (targetColumn.length - 1) + '"]'
       );
-      const targetRect = targetCell ? targetCell.getBoundingClientRect() : null;
+      const targetBounds = targetCell ? targetCell.getBoundingClientRect() : null;
+      const targetRect = sourceRect && targetBounds ? centeredFlightRect(sourceRect, targetBounds) : null;
       if (!sourceRect || !targetRect) continue;
 
       const flight = createFlightTile(token, sourceRect);
       targetCell.classList.add("is-flying");
-      const deltaX = (targetRect.left + targetRect.width / 2) - (sourceRect.left + sourceRect.width / 2);
-      const deltaY = (targetRect.top + targetRect.height / 2) - (sourceRect.top + sourceRect.height / 2);
-      const lift = Math.max(16, sourceRect.height * .58);
       const pendingAnimations = [];
       if (revealAnimation) pendingAnimations.push(revealAnimation.finished.catch(function () {}));
       if (typeof flight.animate === "function") {
-        const animation = flight.animate([
-          { transform: "translate(0px, 0px) scale(1)", offset: 0 },
-          { transform: "translate(0px, " + (-lift) + "px) scale(1.055)", offset: 0.16 },
-          { transform: "translate(" + deltaX + "px, " + (-lift) + "px) scale(1.04)", offset: 0.68 },
-          { transform: "translate(" + deltaX + "px, " + (deltaY - 5) + "px) scale(1.025)", offset: 0.9 },
-          { transform: "translate(" + deltaX + "px, " + deltaY + "px) scale(1)", offset: 1 }
-        ], { duration: duration, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards" });
+        const animation = flight.animate(flightKeyframes(sourceRect, targetRect), {
+          duration: duration, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards"
+        });
         pendingAnimations.push(animation.finished.catch(function () {}));
       } else {
         pendingAnimations.push(new Promise(function (resolve) { window.setTimeout(resolve, duration); }));
@@ -1116,6 +1134,7 @@
       await Promise.all(pendingAnimations);
       flight.remove();
       targetCell.classList.remove("is-flying");
+      vibrateOnLanding();
     }
   }
 
@@ -1365,6 +1384,10 @@
     updateSaveButton();
     persistLocalData(false);
     if (soundEnabled) playSound("move");
+  });
+  ui.vibrationToggle.addEventListener("change", function () {
+    vibrationEnabled = ui.vibrationToggle.checked;
+    persistLocalData(false);
   });
   ui.saveButton.addEventListener("click", openSaveDialog);
   ui.closeSaveButton.addEventListener("click", closeSaveDialog);
