@@ -7,8 +7,8 @@
     <meta name="description" content="海宝跳跳是一款轻松又烧脑的海洋图案归列小游戏。">
     <title>海宝跳跳 · 图案归列</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='20' fill='%23127b77'/%3E%3Ctext x='32' y='46' text-anchor='middle' font-size='43'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=20261012-2">
-    <script src="game.js?v=20261012-2" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20261012-4">
+    <script src="game.js?v=20261012-4" defer></script>
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -20,7 +20,7 @@
           <span class="brand-mark" aria-hidden="true">✦</span>
           <span class="brand-copy">
             <strong>海宝跳跳</strong>
-            <small>轻松整理，慢慢通关</small>
+            <small id="brandSubtitle">自由挑战 · 慢慢通关</small>
           </span>
         </a>
         <div class="topbar-actions">
@@ -36,6 +36,10 @@
             </select>
             <span class="select-chevron" aria-hidden="true">⌄</span>
           </label>
+          <button class="icon-button campaign-button" id="campaignButton" type="button" aria-label="关卡闯关" aria-haspopup="dialog" title="关卡闯关">
+            <span aria-hidden="true">▦</span>
+            <span>关卡</span>
+          </button>
           <button class="icon-button settings-button" id="settingsButton" type="button" aria-label="游戏设置" aria-haspopup="dialog">
             <span aria-hidden="true">⚙</span>
             <span>设置</span>
@@ -65,7 +69,7 @@
           <div class="game-card-header">
             <div>
               <div class="game-title-row">
-                <h2>图案归列</h2>
+                <h2 id="gameTitle">图案归列</h2>
                 <span class="level-badge" id="levelBadge">普通</span>
               </div>
               <p class="board-caption" id="boardCaption">每列最多 4 格 · 可叠放任意图案</p>
@@ -130,7 +134,7 @@
           <div class="victory-banner" id="victoryBanner" hidden>
             <span class="victory-sparkle" aria-hidden="true">✦</span>
             <div><strong>整理完成！</strong><span>每种图案都找到自己的位置了。</span></div>
-            <button id="victoryNewGameButton" type="button">再玩一局 <span aria-hidden="true">→</span></button>
+            <button id="victoryNewGameButton" type="button"><span id="victoryButtonText">再玩一局</span> <span aria-hidden="true">→</span></button>
           </div>
         </section>
 
@@ -140,7 +144,7 @@
             <div><strong>怎么玩</strong><small>三步开始整理</small></div>
           </div>
           <div class="how-step"><span>01</span><p>点选有图案的列，或直接拖动。</p></div>
-          <div class="how-step"><span>02</span><p>顶部相同图案会按目标列空位逐个移动；只能放入空列或顶部相同的列。</p></div>
+          <div class="how-step"><span>02</span><p>顶部连续相同的图案会连成一组一起移动；只能放进空列或顶部相同的列。</p></div>
           <div class="how-step"><span>03</span><p>需要腾位置时，暂存单个图案。</p></div>
         </section>
 
@@ -151,6 +155,24 @@
         </footer>
       </main>
     </div>
+
+    <dialog class="settings-dialog campaign-dialog" id="campaignDialog" aria-labelledby="campaignTitle">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-dot"></span> 一关接一关</p>
+          <h2 id="campaignTitle">关卡闯关</h2>
+        </div>
+        <button class="close-button" id="closeCampaignButton" type="button" aria-label="关闭关卡列表">×</button>
+      </div>
+      <div class="campaign-dialog-content">
+        <p class="campaign-progress" id="campaignProgress">已解锁 1 / 30 关</p>
+        <div class="campaign-level-grid" id="campaignLevelGrid" role="group" aria-label="游戏关卡"></div>
+      </div>
+      <div class="dialog-actions campaign-dialog-actions">
+        <span>每关从可解的棋盘开始，难度逐步增加</span>
+        <button id="closeCampaignFooterButton" class="secondary-button" type="button">返回游戏</button>
+      </div>
+    </dialog>
 
     <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
       <div class="dialog-header">

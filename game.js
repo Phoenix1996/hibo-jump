@@ -76,11 +76,42 @@
     hard: { label: "困难", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 1000, mysteryCount: 12, fixedCount: 3 }
   };
 
+  const CAMPAIGN_LEVEL_COUNT = 30;
   const DEFAULT_SETTINGS = { difficulty: "hard", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 1000, mysteryCount: 12, fixedCount: 3 };
   const STORAGE_KEY = "haibao-jump.local.v1";
   const SAVE_SLOT_COUNT = 3;
+
+  function campaignSettingsForLevel(level) {
+    level = Math.max(1, Math.min(CAMPAIGN_LEVEL_COUNT, Number.parseInt(level, 10) || 1));
+    if (level <= 5) {
+      return { difficulty: "custom", patternCount: 3, capacity: 4, reserveCount: 4,
+        shuffleSteps: 20 + (level - 1) * 20, mysteryCount: Math.max(0, level - 3), fixedCount: 0 };
+    }
+    if (level <= 10) {
+      return { difficulty: "custom", patternCount: 4, capacity: 6, reserveCount: 4,
+        shuffleSteps: 140 + (level - 6) * 55, mysteryCount: level - 5, fixedCount: 0 };
+    }
+    if (level <= 15) {
+      return { difficulty: "custom", patternCount: 5, capacity: 8, reserveCount: 5,
+        shuffleSteps: 400 + (level - 11) * 85, mysteryCount: 6 + (level - 11) * 2, fixedCount: 1 };
+    }
+    if (level <= 20) {
+      return { difficulty: "custom", patternCount: 6, capacity: 10, reserveCount: 6,
+        shuffleSteps: 850 + (level - 16) * 80, mysteryCount: 14 + (level - 16) * 2, fixedCount: 2 };
+    }
+    return { difficulty: "custom", patternCount: 7, capacity: 12, reserveCount: 8,
+      shuffleSteps: 1250 + (level - 21) * 100, mysteryCount: Math.min(24, 20 + (level - 21) * 2), fixedCount: 3 };
+  }
   const ui = {
     themeSelect: document.getElementById("themeSelect"),
+    brandSubtitle: document.getElementById("brandSubtitle"),
+    gameTitle: document.getElementById("gameTitle"),
+    campaignButton: document.getElementById("campaignButton"),
+    campaignDialog: document.getElementById("campaignDialog"),
+    closeCampaignButton: document.getElementById("closeCampaignButton"),
+    closeCampaignFooterButton: document.getElementById("closeCampaignFooterButton"),
+    campaignProgress: document.getElementById("campaignProgress"),
+    campaignLevelGrid: document.getElementById("campaignLevelGrid"),
     floatingToken: document.getElementById("floatingToken"),
     settingsButton: document.getElementById("settingsButton"),
     difficultyBadge: document.getElementById("levelBadge"),
@@ -96,6 +127,7 @@
     newGameButton: document.getElementById("newGameButton"),
     victoryBanner: document.getElementById("victoryBanner"),
     victoryNewGameButton: document.getElementById("victoryNewGameButton"),
+    victoryButtonText: document.getElementById("victoryButtonText"),
     settingsDialog: document.getElementById("settingsDialog"),
     closeSettingsButton: document.getElementById("closeSettingsButton"),
     cancelSettingsButton: document.getElementById("cancelSettingsButton"),
@@ -126,6 +158,9 @@
   };
 
   let settings = Object.assign({}, DEFAULT_SETTINGS);
+  let campaignMode = false;
+  let campaignLevel = 1;
+  let campaignUnlockedLevel = 1;
   let currentThemeId = "ocean";
   let board = null;
   let initialBoard = null;
@@ -198,7 +233,12 @@
   }
 
   function columnIsSorted(column) {
-    return columnIsSortedForCapacity(column, settings.capacity);
+    if (!board || !columnIsSortedForCapacity(column, settings.capacity)) return false;
+    const blankCount = column.filter(isBlankToken).length;
+    const patternId = actualPatternId(column.find(function (token) { return !isBlankToken(token); }));
+    // A white fixed cell stands for a tile missing from the puzzle, not an arbitrary
+    // tile that happens to sit elsewhere on the board. Count columns and reserve together.
+    return Boolean(patternId) && countPatternTiles(board, patternId) === settings.capacity - blankCount;
   }
 
   function cloneBoard(source) {
@@ -338,6 +378,8 @@
       board: snapshotBoard,
       initialBoard: initialBoard,
       moveCount: moveCount,
+      campaignMode: source.campaignMode === true,
+      campaignLevel: Math.max(1, Math.min(CAMPAIGN_LEVEL_COUNT, Number.parseInt(source.campaignLevel, 10) || 1)),
       migratedBlankLayout: migratedBlankLayout,
       savedAt: Number(source.savedAt) || Date.now()
     };
@@ -350,6 +392,8 @@
       board: cloneBoard(board),
       initialBoard: cloneBoard(initialBoard || board),
       moveCount: moveCount,
+      campaignMode: campaignMode,
+      campaignLevel: campaignLevel,
       savedAt: Date.now()
     };
   }
@@ -362,6 +406,8 @@
     board = normalized.board;
     initialBoard = normalized.initialBoard;
     moveCount = normalized.moveCount;
+    campaignMode = normalized.campaignMode;
+    campaignLevel = normalized.campaignLevel;
     selected = null;
     moveHistory = [];
     victoryCelebrated = isVictory();
@@ -373,6 +419,7 @@
     try { stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null"); } catch (error) { stored = null; }
     if (!stored || typeof stored !== "object") return false;
     settings = normalizeSettings(stored.settings);
+    campaignUnlockedLevel = Math.max(1, Math.min(CAMPAIGN_LEVEL_COUNT, Number.parseInt(stored.campaignUnlockedLevel, 10) || 1));
     currentThemeId = THEMES[stored.themeId] ? stored.themeId : "ocean";
     soundEnabled = stored.soundEnabled !== false;
     vibrationEnabled = stored.vibrationEnabled !== false;
@@ -395,6 +442,7 @@
       themeId: currentThemeId,
       soundEnabled: soundEnabled,
       vibrationEnabled: vibrationEnabled,
+      campaignUnlockedLevel: campaignUnlockedLevel,
       saveSlots: saveSlots.map(function (snapshot) {
         if (!snapshot) return null;
         const storedSnapshot = Object.assign({}, snapshot);
@@ -448,7 +496,8 @@
         const savedDifficulty = snapshot.settings.difficulty === "custom"
           ? "自定义"
           : PRESETS[snapshot.settings.difficulty].label;
-        details = savedDifficulty + " · " + THEMES[snapshot.themeId].name + " · " +
+        const saveMode = snapshot.campaignMode ? "第 " + snapshot.campaignLevel + " 关" : savedDifficulty;
+        details = saveMode + " · " + THEMES[snapshot.themeId].name + " · " +
           snapshot.moveCount + " 步 · " + formatSaveDate(snapshot.savedAt);
       }
       const status = isCurrent ? "正在游玩" : (snapshot ? "已保存" : "空存档");
@@ -480,6 +529,67 @@
   function closeSaveDialog() {
     if (typeof ui.saveDialog.close === "function") ui.saveDialog.close();
     else ui.saveDialog.removeAttribute("open");
+  }
+
+  function renderCampaignLevels() {
+    ui.campaignProgress.textContent = "已解锁 " + campaignUnlockedLevel + " / " + CAMPAIGN_LEVEL_COUNT + " 关";
+    ui.campaignLevelGrid.innerHTML = Array.from({ length: CAMPAIGN_LEVEL_COUNT }, function (_, index) {
+      const level = index + 1;
+      const locked = level > campaignUnlockedLevel;
+      const current = campaignMode && level === campaignLevel;
+      const completed = level < campaignUnlockedLevel;
+      const stateClass = locked ? " is-locked" : (current ? " is-current" : (completed ? " is-complete" : ""));
+      const stateLabel = locked ? "未解锁" : (current ? "当前关卡" : (completed ? "已通过" : "已解锁"));
+      return '<button class="campaign-level-button' + stateClass + '" type="button"' +
+        ' data-campaign-level="' + level + '" aria-label="第 ' + level + ' 关，' + stateLabel + '"' +
+        (locked ? " disabled" : "") + (current ? ' aria-current="step"' : "") + '>' +
+        '<strong>' + level + '</strong><small>' + stateLabel + '</small></button>';
+    }).join("");
+  }
+
+  function openCampaignDialog() {
+    if (isAnimating) return;
+    renderCampaignLevels();
+    if (typeof ui.campaignDialog.showModal === "function") ui.campaignDialog.showModal();
+    else ui.campaignDialog.setAttribute("open", "");
+  }
+
+  function closeCampaignDialog() {
+    if (typeof ui.campaignDialog.close === "function") ui.campaignDialog.close();
+    else ui.campaignDialog.removeAttribute("open");
+  }
+
+  function startCampaignLevel(level) {
+    if (isAnimating) return;
+    campaignMode = true;
+    campaignLevel = Math.max(1, Math.min(campaignUnlockedLevel, CAMPAIGN_LEVEL_COUNT, Number.parseInt(level, 10) || 1));
+    settings = campaignSettingsForLevel(campaignLevel);
+    selected = null;
+    moveCount = 0;
+    moveHistory = [];
+    board = buildSolvableBoard(settings);
+    initialBoard = cloneBoard(board);
+    victoryCelebrated = false;
+    clearCelebration();
+    closeCampaignDialog();
+    setFormValues(settings);
+    render();
+    persistLocalData(true);
+    announce("第 " + campaignLevel + " 关开始。完成后会解锁下一关。");
+  }
+
+  function handleCampaignLevelClick(event) {
+    const button = event.target.closest("[data-campaign-level]");
+    if (!button || !ui.campaignLevelGrid.contains(button) || button.disabled) return;
+    startCampaignLevel(Number(button.dataset.campaignLevel));
+  }
+
+  function handleVictoryAction() {
+    if (campaignMode && isVictory() && campaignLevel < CAMPAIGN_LEVEL_COUNT) {
+      startCampaignLevel(campaignLevel + 1);
+      return;
+    }
+    setNewGame();
   }
 
   function createGameInSlot(index) {
@@ -964,6 +1074,136 @@
     return "第 " + (index + 1) + " 列，顶部是" + topLabel + "，共 " + column.length + " 格；固定白格 " + fixedCount + " 个";
   }
 
+  function visualKeyForPattern(pattern) {
+    return pattern.id + "|" + (pattern.image || pattern.glyph);
+  }
+
+  function createColumnMarkup(columnIndex) {
+    const cells = [];
+    for (let level = 0; level < settings.capacity; level += 1) {
+      cells.push('<span class="stack-cell" data-level="' + level + '" style="grid-row:' +
+        (settings.capacity - level) + '" aria-hidden="true"></span>');
+    }
+    return '<button class="column" type="button" data-kind="column" data-index="' + columnIndex + '">' +
+      '<span class="column-meta"><span>列 ' + (columnIndex + 1) + '</span><span class="column-count"></span></span>' +
+      '<span class="column-stack" style="--cell-count:' + settings.capacity + '">' + cells.join("") + '</span></button>';
+  }
+
+  function patchColumnElement(element, column, columnIndex) {
+    const isComplete = columnIsSorted(column);
+    const groupSize = topGroupSize(column);
+    const isSelected = selected && selected.kind === "column" && selected.index === columnIndex;
+    const canDrag = !isComplete && groupSize > 0;
+    const title = column.length
+      ? (isComplete ? "此列不能接收或移出图案" : (canDrag ? "移动顶部图案组" : "只有固定格，不能移动"))
+      : "空列";
+    element.classList.toggle("is-empty", column.length === 0);
+    element.classList.toggle("is-complete", isComplete);
+    element.classList.toggle("is-selected", Boolean(isSelected));
+    element.draggable = canDrag;
+    const description = columnDescription(column, columnIndex);
+    if (element.getAttribute("aria-label") !== description) element.setAttribute("aria-label", description);
+    if (element.title !== title) element.title = title;
+
+    const countLabel = element.querySelector(".column-count");
+    const countText = column.length + "/" + settings.capacity;
+    if (countLabel.textContent !== countText) countLabel.textContent = countText;
+
+    const stack = element.querySelector(".column-stack");
+    for (let level = 0; level < settings.capacity; level += 1) {
+      const cell = stack.children[level];
+      const hasToken = level < column.length;
+      const token = hasToken ? column[level] : null;
+      const isBlank = isBlankToken(token);
+      const isHidden = isMysteryToken(token);
+      const isFixed = hasToken && isFixedToken(token);
+      const pattern = hasToken && !isBlank ? getPattern(token) : null;
+      const isTopGroup = hasToken && level >= column.length - groupSize;
+      const className = "stack-cell" + (hasToken ? " tile" : " is-empty") +
+        (isTopGroup ? " top-group" : "") + (isFixed ? " is-fixed-cell" : "") +
+        (isBlank ? " is-blank-cell" : "") + (isHidden ? " mystery-hidden" : "") +
+        (!isHidden && pattern && pattern.image ? " has-art" : "");
+      if (cell.className !== className) cell.className = className;
+
+      const patternId = isHidden || isBlank || !pattern ? "" : pattern.id;
+      if (cell.dataset.patternId !== patternId) cell.dataset.patternId = patternId;
+      let visualKey = "empty";
+      if (isBlank) visualKey = "blank";
+      else if (isHidden) visualKey = "mystery";
+      else if (pattern) visualKey = visualKeyForPattern(pattern);
+      if (cell.dataset.visualKey !== visualKey) {
+        if (isHidden) cell.textContent = "?";
+        else if (isBlank || !pattern) cell.textContent = "";
+        else cell.innerHTML = patternVisualHtml(pattern);
+        cell.dataset.visualKey = visualKey;
+      }
+      const patternColor = pattern && !isHidden ? pattern.color : "";
+      if (cell.style.getPropertyValue("--pattern-color") !== patternColor) {
+        if (patternColor) cell.style.setProperty("--pattern-color", patternColor);
+        else cell.style.removeProperty("--pattern-color");
+      }
+    }
+  }
+
+  function ensureColumnElements() {
+    const needsRebuild = ui.columns.children.length !== board.columns.length ||
+      Array.from(ui.columns.children).some(function (element) {
+        const stack = element.querySelector(".column-stack");
+        return !stack || stack.children.length !== settings.capacity;
+      });
+    if (needsRebuild) {
+      ui.columns.innerHTML = board.columns.map(function (_, index) { return createColumnMarkup(index); }).join("");
+    }
+    board.columns.forEach(function (column, index) {
+      patchColumnElement(ui.columns.children[index], column, index);
+    });
+  }
+
+  function ensureReserveElements() {
+    const reserve = board.reserve;
+    ui.reserveSection.hidden = !reserve.length;
+    if (!reserve.length) {
+      if (ui.reserveSlots.children.length) ui.reserveSlots.replaceChildren();
+      return;
+    }
+    if (ui.reserveSlots.children.length !== reserve.length) {
+      ui.reserveSlots.innerHTML = reserve.map(function (_, index) {
+        return '<button class="reserve-slot" type="button" data-kind="reserve" data-index="' + index + '">' +
+          '<span class="reserve-placeholder" aria-hidden="true">＋</span>' +
+          '<span class="tile reserve-glyph" aria-hidden="true" hidden></span></button>';
+      }).join("");
+    }
+    reserve.forEach(function (patternId, index) {
+      const button = ui.reserveSlots.children[index];
+      const isSelected = selected && selected.kind === "reserve" && selected.index === index;
+      const filled = Boolean(patternId);
+      const pattern = filled ? getPattern(patternId) : null;
+      const glyph = button.querySelector(".reserve-glyph");
+      const placeholder = button.querySelector(".reserve-placeholder");
+      const className = "reserve-slot" + (filled ? " is-filled" : "") + (isSelected ? " is-selected" : "");
+      if (button.className !== className) button.className = className;
+      button.draggable = filled;
+      const label = filled
+        ? "暂存位 " + (index + 1) + "，" + pattern.name + "，点选后放回棋盘"
+        : "暂存位 " + (index + 1) + "，空位";
+      if (button.getAttribute("aria-label") !== label) button.setAttribute("aria-label", label);
+      const title = filled ? "点选后放回棋盘" : "空暂存位";
+      if (button.title !== title) button.title = title;
+      glyph.hidden = !filled;
+      placeholder.hidden = filled;
+      if (!filled) return;
+      glyph.classList.toggle("has-art", Boolean(pattern.image));
+      const visualKey = visualKeyForPattern(pattern);
+      if (glyph.dataset.visualKey !== visualKey) {
+        glyph.innerHTML = patternVisualHtml(pattern);
+        glyph.dataset.visualKey = visualKey;
+      }
+      if (glyph.style.getPropertyValue("--pattern-color") !== pattern.color) {
+        glyph.style.setProperty("--pattern-color", pattern.color);
+      }
+    });
+  }
+
   function canMoveToColumn(source, targetIndex) {
     if (!board || targetIndex < 0 || targetIndex >= board.columns.length) return false;
     if (source.kind === "column" && source.index === targetIndex) return false;
@@ -998,80 +1238,25 @@
     ui.themeSelect.value = currentThemeId;
     const featuredPattern = getPattern("p1");
     ui.floatingToken.classList.toggle("has-art", Boolean(featuredPattern.image));
-    ui.floatingToken.innerHTML = patternVisualHtml(featuredPattern);
-    ui.columns.innerHTML = board.columns.map(function (column, columnIndex) {
-      const isComplete = columnIsSorted(column);
-      const groupSize = topGroupSize(column);
-      const slots = [];
-      for (let level = 0; level < settings.capacity; level += 1) {
-        if (level < column.length) {
-          const token = column[level];
-          const isBlank = isBlankToken(token);
-          const pattern = isBlank ? null : getPattern(token);
-          const isTopGroup = level >= column.length - groupSize;
-          const isHidden = isMysteryToken(token);
-          const isFixed = isFixedToken(token);
-          const tileClass = "stack-cell tile" + (isTopGroup ? " top-group" : "") +
-            (isFixed ? " is-fixed-cell" : "") + (isBlank ? " is-blank-cell" : "") +
-            (isHidden ? " mystery-hidden" : "") + (!isHidden && pattern && pattern.image ? " has-art" : "");
-          slots.push(
-            '<span class="' + tileClass + '" ' +
-            'data-pattern-id="' + (isHidden || isBlank ? "" : escapeHtml(pattern.id)) + '" data-level="' + level + '" ' +
-            'style="grid-row:' + (settings.capacity - level) + ';' +
-              (isHidden || isBlank ? "" : '--pattern-color:' + escapeHtml(pattern.color) + ';') + '" aria-hidden="true">' +
-            (isHidden ? "?" : (isBlank ? "" : patternVisualHtml(pattern))) + "</span>"
-          );
-        } else {
-          slots.push('<span class="stack-cell is-empty" data-level="' + level + '" style="grid-row:' +
-            (settings.capacity - level) + '" aria-hidden="true"></span>');
-        }
-      }
-
-      const isSelected = selected && selected.kind === "column" && selected.index === columnIndex;
-      const canDrag = !isComplete && topGroupSize(column) > 0;
-      const title = column.length
-        ? (isComplete ? "此列不能接收或移出图案" : (canDrag ? "移动顶部图案组" : "只有固定格，不能移动"))
-        : "空列";
-      return (
-        '<button class="column' + (column.length ? "" : " is-empty") +
-          (isComplete ? " is-complete" : "") +
-          (isSelected ? " is-selected" : "") + '" ' +
-          'type="button" data-kind="column" data-index="' + columnIndex + '" draggable="' + canDrag + '" ' +
-          'aria-label="' + escapeHtml(columnDescription(column, columnIndex)) + '" title="' + escapeHtml(title) + '">' +
-          '<span class="column-meta"><span>列 ' + (columnIndex + 1) + '</span><span class="column-count">' +
-          column.length + "/" + settings.capacity + '</span></span>' +
-          '<span class="column-stack" style="--cell-count:' + settings.capacity + '">' + slots.join("") + "</span></button>"
-      );
-    }).join("");
-
-    if (board.reserve.length) {
-      ui.reserveSection.hidden = false;
-      ui.reserveSlots.innerHTML = board.reserve.map(function (patternId, reserveIndex) {
-        const isSelected = selected && selected.kind === "reserve" && selected.index === reserveIndex;
-        if (patternId) {
-          const pattern = getPattern(patternId);
-          return (
-            '<button class="reserve-slot is-filled' + (isSelected ? " is-selected" : "") +
-              '" type="button" data-kind="reserve" data-index="' + reserveIndex + '" draggable="true" ' +
-              'aria-label="暂存位 ' + (reserveIndex + 1) + "，" + escapeHtml(pattern.name) + '，点选后放回棋盘" title="点选后放回棋盘">' +
-              '<span class="tile reserve-glyph' + (pattern.image ? " has-art" : "") + '" style="--pattern-color:' + escapeHtml(pattern.color) + '" aria-hidden="true">' +
-                patternVisualHtml(pattern) + "</span></button>"
-          );
-        }
-        return (
-          '<button class="reserve-slot" type="button" ' +
-            'data-kind="reserve" data-index="' + reserveIndex + '" aria-label="暂存位 ' + (reserveIndex + 1) + "，空位" + '" title="空暂存位">' +
-            '<span class="reserve-placeholder" aria-hidden="true">＋</span></button>'
-        );
-      }).join("");
-    } else {
-      ui.reserveSection.hidden = true;
-      ui.reserveSlots.innerHTML = "";
+    const featuredVisualKey = visualKeyForPattern(featuredPattern);
+    if (ui.floatingToken.dataset.visualKey !== featuredVisualKey) {
+      ui.floatingToken.innerHTML = patternVisualHtml(featuredPattern);
+      ui.floatingToken.dataset.visualKey = featuredVisualKey;
     }
-
+    ensureColumnElements();
+    ensureReserveElements();
     ui.moveCount.textContent = String(moveCount);
     ui.capacityLabel.textContent = String(settings.capacity);
-    ui.difficultyBadge.textContent = settings.difficulty === "custom" ? "自定义" : PRESETS[settings.difficulty].label;
+    ui.difficultyBadge.textContent = campaignMode ? "闯关" : (settings.difficulty === "custom" ? "自定义" : PRESETS[settings.difficulty].label);
+    ui.gameTitle.textContent = campaignMode ? "第 " + campaignLevel + " 关" : "图案归列";
+    ui.brandSubtitle.textContent = campaignMode
+      ? "关卡进度 " + campaignLevel + "/" + CAMPAIGN_LEVEL_COUNT
+      : "自由挑战 · 慢慢通关";
+    ui.campaignButton.setAttribute("aria-label", campaignMode
+      ? "关卡闯关，当前第 " + campaignLevel + " 关，已解锁 " + campaignUnlockedLevel + " 关"
+      : "关卡闯关，已解锁 " + campaignUnlockedLevel + " 关");
+    const victoryButtonLabel = campaignMode && campaignLevel < CAMPAIGN_LEVEL_COUNT ? "下一关" : "再玩一局";
+    if (ui.victoryButtonText.textContent !== victoryButtonLabel) ui.victoryButtonText.textContent = victoryButtonLabel;
     ui.boardCaption.textContent = "每列最多 " + settings.capacity + " 格 · " + settings.shuffleSteps + " 步打乱" + (settings.fixedCount ? " · 固定白格会随机分散" : "");
     ui.cancelSelectionButton.hidden = !selected || isAnimating;
     ui.victoryBanner.hidden = isAnimating || !isVictory();
@@ -1090,6 +1275,7 @@
   function selectSource(kind, index) {
     if (isAnimating || isVictory()) return;
     if (kind === "column" && columnIsSorted(board.columns[index])) {
+      nudgeTarget("column", index);
       announce("这一列已经完成，暂时不能再移动。");
       return;
     }
@@ -1176,6 +1362,15 @@
     return elements;
   }
 
+  function unionRect(rects) {
+    if (!rects.length) return null;
+    const left = Math.min.apply(null, rects.map(function (rect) { return rect.left; }));
+    const top = Math.min.apply(null, rects.map(function (rect) { return rect.top; }));
+    const right = Math.max.apply(null, rects.map(function (rect) { return rect.right; }));
+    const bottom = Math.max.apply(null, rects.map(function (rect) { return rect.bottom; }));
+    return { left: left, top: top, right: right, bottom: bottom, width: right - left, height: bottom - top };
+  }
+
   function sourceElements(move) {
     if (move.source.kind === "reserve") {
       const sourceButton = ui.reserveSlots.querySelector('[data-kind="reserve"][data-index="' + move.source.index + '"]');
@@ -1194,99 +1389,225 @@
     return elementsForColumnLevels(move.target.index, column.length, move.count);
   }
 
-  function createFlightTile(patternId, sourceRect) {
+  function createFlightTile(patternId, sourceRect, parent, origin, sourceElement) {
     const pattern = getPattern(patternId);
     const tile = document.createElement("span");
     tile.className = "flight-tile tile" + (isMysteryToken(patternId) ? " mystery-hidden" : "") +
       (!isMysteryToken(patternId) && pattern.image ? " has-art" : "");
-    tile.style.left = sourceRect.left + "px";
-    tile.style.top = sourceRect.top + "px";
+    const offsetLeft = parent && parent !== ui.flightLayer && origin ? sourceRect.left - origin.left : sourceRect.left;
+    const offsetTop = parent && parent !== ui.flightLayer && origin ? sourceRect.top - origin.top : sourceRect.top;
+    tile.style.left = offsetLeft + "px";
+    tile.style.top = offsetTop + "px";
     tile.style.width = sourceRect.width + "px";
     tile.style.height = sourceRect.height + "px";
     if (!isMysteryToken(patternId)) tile.style.setProperty("--pattern-color", pattern.color);
-    tile.innerHTML = isMysteryToken(patternId) ? "?" : patternVisualHtml(pattern);
-    ui.flightLayer.appendChild(tile);
+    if (sourceElement) {
+      Array.from(sourceElement.childNodes).forEach(function (node) {
+        tile.appendChild(node.cloneNode(true));
+      });
+    } else {
+      tile.innerHTML = isMysteryToken(patternId) ? "?" : patternVisualHtml(pattern);
+    }
+    if (parent && parent !== ui.flightLayer) tile.style.position = "absolute";
+    (parent || ui.flightLayer).appendChild(tile);
     return tile;
   }
 
   async function animateMove(move) {
-    const fromElements = sourceElements(move).filter(Boolean);
-    const toElements = destinationElements(move).filter(Boolean);
-    if (!fromElements.length || !toElements.length) return;
+    const source = sourceElements(move).filter(Boolean)[0];
+    const oldDestination = destinationElements(move).filter(Boolean)[0];
+    if (!source || !oldDestination) return;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    for (let step = 0; step < fromElements.length; step += 1) {
-      const index = fromElements.length - 1 - step;
-      const source = fromElements[index];
-      const destination = toElements[Math.min(index, toElements.length - 1)];
-      const sourceRect = source.getBoundingClientRect();
-      const targetRect = centeredFlightRect(sourceRect, destination.getBoundingClientRect());
-      const flight = createFlightTile(move.patternIds[index], sourceRect);
-      source.classList.add("is-flying");
-      if (move.target.kind === "reserve") destination.classList.add("is-flying");
-      await animateFlightTile(flight, sourceRect, targetRect, reducedMotion);
-      await revealFlightTile(flight, move.patternIds[index], sourceRect, targetRect, reducedMotion);
-      flight.remove();
-      source.classList.remove("is-flying");
-      destination.classList.remove("is-flying");
-      playSound("tile", move.patternIds[index]);
-      vibrateOnLanding();
+    const token = move.patternIds[0];
+    const sourceRect = source.getBoundingClientRect();
+    const initialTargetRect = centeredFlightRect(sourceRect, oldDestination.getBoundingClientRect());
+    const flight = createFlightTile(token, sourceRect, null, null, source);
+    const flightImage = flight.querySelector("img");
+    if (flightImage) {
+      flightImage.loading = "eager";
+      if (typeof flightImage.decode === "function") await flightImage.decode().catch(function () {});
     }
-    ui.flightLayer.innerHTML = "";
-    fromElements.forEach(function (element) { element.classList.remove("is-flying"); });
+
+    let revealCell = null;
+    let revealedMystery = false;
+    if (move.source.kind === "column") {
+      const sourceColumn = board.columns[move.source.index];
+      sourceColumn.pop();
+      const nextTop = sourceColumn.length - 1;
+      revealedMystery = nextTop >= 0 && isMysteryToken(sourceColumn[nextTop]);
+      revealTopToken(sourceColumn);
+    }
+    if (move.source.kind === "reserve") board.reserve[move.source.index] = null;
+    if (move.target.kind === "reserve") {
+      board.reserve[move.target.index] = actualPatternId(token);
+    } else {
+      const targetColumn = board.columns[move.target.index];
+      targetColumn.push(actualPatternId(token));
+      revealTopToken(targetColumn);
+    }
+    render();
+
+    const destination = move.target.kind === "reserve"
+      ? ui.reserveSlots.querySelector('[data-kind="reserve"][data-index="' + move.target.index + '"]')
+      : elementsForColumnLevels(move.target.index, board.columns[move.target.index].length - 1, 1)[0];
+    if (!destination) {
+      flight.remove();
+      return;
+    }
+    destination.classList.add("is-flying");
+    if (revealedMystery) {
+      const sourceColumn = board.columns[move.source.index];
+      revealCell = elementsForColumnLevels(move.source.index, sourceColumn.length - 1, 1)[0];
+    }
+    const targetRect = centeredFlightRect(sourceRect, destination.getBoundingClientRect());
+    const targetImage = destination.querySelector("img");
+    if (targetImage) {
+      targetImage.loading = "eager";
+      if (typeof targetImage.decode === "function") await targetImage.decode().catch(function () {});
+    }
+    if (revealCell) {
+      const revealedImage = revealCell.querySelector("img");
+      if (revealedImage) {
+        revealedImage.loading = "eager";
+        if (typeof revealedImage.decode === "function") await revealedImage.decode().catch(function () {});
+      }
+    }
+
+    await animateFlightTile(flight, sourceRect, targetRect, reducedMotion);
+    await revealFlightTile(flight, token, sourceRect, targetRect, reducedMotion);
+    flight.remove();
+    destination.classList.remove("is-flying");
+    await animateSourceReveal(revealCell, reducedMotion);
+    playSound("tile", token);
+    vibrateOnLanding();
+  }
+  async function animateGroupRevealTile(tile, token, reducedMotion) {
+    if (!tile || !isMysteryToken(token)) return;
+    if (typeof tile.animate === "function") {
+      const close = tile.animate([
+        { transform: "rotateY(0deg) scale(1)", opacity: 1 },
+        { transform: "rotateY(88deg) scale(.9)", opacity: .82 }
+      ], { duration: reducedMotion ? 60 : 85, easing: "ease-in", fill: "forwards" });
+      await close.finished.catch(function () {});
+    }
+    const pattern = getPattern(actualPatternId(token));
+    tile.classList.remove("mystery-hidden");
+    if (pattern.image) tile.classList.add("has-art");
+    tile.style.setProperty("--pattern-color", pattern.color);
+    tile.innerHTML = patternVisualHtml(pattern);
+    const image = tile.querySelector("img");
+    if (image && typeof image.decode === "function") await image.decode().catch(function () {});
+    if (typeof tile.animate === "function") {
+      const open = tile.animate([
+        { transform: "rotateY(-88deg) scale(.9)", opacity: .82 },
+        { transform: "rotateY(0deg) scale(1)", opacity: 1 }
+      ], { duration: reducedMotion ? 60 : 85, easing: "cubic-bezier(.2,.8,.25,1)", fill: "forwards" });
+      await open.finished.catch(function () {});
+    }
+  }
+
+  async function animateSourceReveal(cell, reducedMotion) {
+    if (!cell || typeof cell.animate !== "function") return;
+    const animation = cell.animate([
+      { transform: "perspective(360px) rotateY(82deg) scale(.9)", opacity: .8 },
+      { transform: "perspective(360px) rotateY(0) scale(1)", opacity: 1 }
+    ], { duration: reducedMotion ? 70 : 130, easing: "cubic-bezier(.2,.75,.25,1)", fill: "none" });
+    await animation.finished.catch(function () {});
   }
 
   async function animateGroupMove(move) {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const sourceIndex = move.source.index;
     const targetIndex = move.target.index;
+    const sourceColumn = board.columns[sourceIndex];
+    const targetColumn = board.columns[targetIndex];
+    const sourceStart = sourceColumn.length - move.count;
+    const targetStart = targetColumn.length;
+    const sourceCells = elementsForColumnLevels(sourceIndex, sourceStart, move.count);
+    const sourceRects = sourceCells.map(function (cell) { return cell.getBoundingClientRect(); });
+    if (sourceCells.length !== move.count) return;
+    const sourceBounds = unionRect(sourceRects);
+    const tokens = sourceColumn.slice(sourceStart);
+    const newlyExposedLevel = sourceStart - 1;
+    const revealSource = newlyExposedLevel >= 0 && isMysteryToken(sourceColumn[newlyExposedLevel]);
 
-    for (let step = 0; step < move.count; step += 1) {
-      const sourceColumn = board.columns[sourceIndex];
-      const targetColumn = board.columns[targetIndex];
-      const sourceLevel = sourceColumn.length - 1;
-      const sourceCell = ui.columns.querySelector(
-        '[data-kind="column"][data-index="' + sourceIndex + '"] .stack-cell[data-level="' + sourceLevel + '"]'
-      );
-      const sourceRect = sourceCell ? sourceCell.getBoundingClientRect() : null;
-      const token = sourceColumn.pop();
-      targetColumn.push(actualPatternId(token));
-      const revealedLevel = sourceColumn.length - 1;
-      const revealedMystery = revealedLevel >= 0 && isMysteryToken(sourceColumn[revealedLevel]);
-      revealTopToken(sourceColumn);
-      render();
+    const group = document.createElement("div");
+    group.className = "flight-group";
+    group.setAttribute("aria-hidden", "true");
+    group.style.left = sourceBounds.left + "px";
+    group.style.top = sourceBounds.top + "px";
+    group.style.width = sourceBounds.width + "px";
+    group.style.height = sourceBounds.height + "px";
+    ui.flightLayer.appendChild(group);
+    const flightTiles = tokens.map(function (token, index) {
+      return createFlightTile(token, sourceRects[index], group, sourceBounds, sourceCells[index]);
+    });
 
-      const revealedCell = revealedMystery ? ui.columns.querySelector(
-        '[data-kind="column"][data-index="' + sourceIndex + '"] .stack-cell[data-level="' + revealedLevel + '"]'
-      ) : null;
-      const revealAnimation = revealedCell && typeof revealedCell.animate === "function"
-        ? revealedCell.animate([
-          { transform: "perspective(360px) rotateY(88deg) scale(.86)", opacity: .72 },
-          { transform: "perspective(360px) rotateY(0) scale(1)", opacity: 1 }
-        ], { duration: reducedMotion ? 70 : 150, easing: "cubic-bezier(.2,.75,.25,1)", fill: "both" })
-        : null;
+    const flightImages = flightTiles.map(function (tile) { return tile.querySelector("img"); }).filter(Boolean);
+    flightImages.forEach(function (image) { image.loading = "eager"; });
+    await Promise.all(flightImages.map(function (image) {
+      return typeof image.decode === "function" ? image.decode().catch(function () {}) : Promise.resolve();
+    }));
 
-      const targetCell = ui.columns.querySelector(
-        '[data-kind="column"][data-index="' + targetIndex + '"] .stack-cell[data-level="' + (targetColumn.length - 1) + '"]'
-      );
-      const targetBounds = targetCell ? targetCell.getBoundingClientRect() : null;
-      const targetRect = sourceRect && targetBounds ? centeredFlightRect(sourceRect, targetBounds) : null;
-      if (!sourceRect || !targetRect) continue;
+    sourceColumn.splice(sourceStart, move.count);
+    targetColumn.push.apply(targetColumn, tokens.map(actualPatternId));
+    revealTopToken(sourceColumn);
+    render();
 
-      const flight = createFlightTile(token, sourceRect);
-      targetCell.classList.add("is-flying");
-      const flightPromise = animateFlightTile(flight, sourceRect, targetRect, reducedMotion);
-      if (revealAnimation) {
-        await Promise.all([flightPromise, revealAnimation.finished.catch(function () {})]);
-      } else {
-        await flightPromise;
-      }
-      await revealFlightTile(flight, token, sourceRect, targetRect, reducedMotion);
-      flight.remove();
-      targetCell.classList.remove("is-flying");
-      playSound("tile", token);
-      vibrateOnLanding();
-      await animateLandingCell(targetCell, reducedMotion);
+    const targetCells = elementsForColumnLevels(targetIndex, targetStart, move.count);
+    targetCells.forEach(function (cell) { cell.classList.add("is-flying"); });
+    const revealCell = revealSource ? elementsForColumnLevels(sourceIndex, newlyExposedLevel, 1)[0] : null;
+    const destinationImages = targetCells.concat(revealCell ? [revealCell] : [])
+      .map(function (element) { return element && element.querySelector("img"); })
+      .filter(Boolean);
+    destinationImages.forEach(function (image) { image.loading = "eager"; });
+    await Promise.all(destinationImages.map(function (image) {
+      return typeof image.decode === "function" ? image.decode().catch(function () {}) : Promise.resolve();
+    }));
+
+    const targetBounds = unionRect(targetCells.map(function (cell) { return cell.getBoundingClientRect(); }));
+    if (sourceBounds && targetBounds) {
+      const flightPromise = (function () {
+        if (typeof group.animate === "function") {
+          const animation = group.animate(
+            reducedMotion
+              ? [{ transform: "translate3d(0,0,0)" }, {
+                transform: "translate3d(" + (targetBounds.left - sourceBounds.left) + "px," +
+                  (targetBounds.top - sourceBounds.top) + "px,0)"
+              }]
+              : flightKeyframes(sourceBounds, targetBounds),
+            {
+              duration: flightDuration(sourceBounds, targetBounds, reducedMotion),
+              easing: reducedMotion ? "ease-out" : "cubic-bezier(.18,.78,.22,1)",
+              fill: "forwards"
+            }
+          );
+          return animation.finished.catch(function () {});
+        }
+        const deltaX = targetBounds.left - sourceBounds.left;
+        const deltaY = targetBounds.top - sourceBounds.top;
+        const duration = flightDuration(sourceBounds, targetBounds, reducedMotion);
+        group.style.transition = "transform " + duration + "ms cubic-bezier(.18,.78,.22,1)";
+        return new Promise(function (resolve) {
+          window.requestAnimationFrame(function () {
+            group.style.transform = "translate3d(" + deltaX + "px," + deltaY + "px,0)";
+            window.setTimeout(resolve, duration);
+          });
+        });
+      })();
+      const revealPromises = flightTiles.map(function (tile, index) {
+        return animateGroupRevealTile(tile, tokens[index], reducedMotion);
+      });
+      const sourceRevealPromise = animateSourceReveal(revealCell, reducedMotion);
+      await Promise.all([flightPromise].concat(revealPromises, [sourceRevealPromise]));
     }
+
+    group.remove();
+    targetCells.forEach(function (cell) { cell.classList.remove("is-flying"); });
+    ui.flightLayer.replaceChildren();
+    tokens.forEach(function (token) { playSound("tile", token); });
+    vibrateOnLanding();
+    await Promise.all(targetCells.map(function (cell) { return animateLandingCell(cell, reducedMotion); }));
   }
 
   async function performMove(move) {
@@ -1298,6 +1619,7 @@
     ui.cancelSelectionButton.hidden = true;
     ui.themeSelect.disabled = true;
     ui.settingsButton.disabled = true;
+    ui.campaignButton.disabled = true;
     ui.newGameButton.disabled = true;
     ui.restartButton.disabled = true;
     ui.shuffleButton.disabled = true;
@@ -1312,16 +1634,10 @@
     else await animateMove(move);
 
     if (move.type === "column-group") {
-      announce("已从列顶依次移动 " + move.count + " 个图案。");
+      announce("已将顶部 " + move.count + " 个图案一起移入目标列。");
     } else if (move.type === "to-reserve") {
-      board.columns[move.source.index].pop();
-      board.reserve[move.target.index] = actualPatternId(move.patternIds[0]);
-      revealTopToken(board.columns[move.source.index]);
       announce("已暂存一个图案。");
     } else {
-      board.reserve[move.source.index] = null;
-      board.columns[move.target.index].push(move.patternIds[0]);
-      revealTopToken(board.columns[move.target.index]);
       announce("图案已放回列中。");
     }
 
@@ -1344,12 +1660,17 @@
     ui.reserveSlots.classList.remove("is-animating");
     ui.themeSelect.disabled = false;
     ui.settingsButton.disabled = false;
+    ui.campaignButton.disabled = false;
     ui.newGameButton.disabled = false;
     ui.restartButton.disabled = false;
     ui.shuffleButton.disabled = false;
+    const won = isVictory();
+    if (won && campaignMode && campaignLevel < CAMPAIGN_LEVEL_COUNT) {
+      campaignUnlockedLevel = Math.max(campaignUnlockedLevel, campaignLevel + 1);
+    }
     render();
     persistLocalData(true);
-    if (isVictory()) {
+    if (won) {
       announce("整理完成！所有图案都回到了自己的列里。");
       showVictoryCelebration();
     } else if (victoryCelebrated) {
@@ -1370,7 +1691,7 @@
     clearCelebration();
     render();
     persistLocalData(true);
-    announce(message || "新的一局开始啦。点一列，再点目标列；顶部连续相同的图案会逐个飞过去。");
+    announce(message || "新的一局开始啦。点一列，再点目标列；顶部连续相同的图案会整组一起移动。");
   }
 
   function restartGame() {
@@ -1517,6 +1838,12 @@
     }
     const kind = element.dataset.kind;
     const index = Number(element.dataset.index);
+    if (kind === "column" && columnIsSorted(board.columns[index])) {
+      event.preventDefault();
+      nudgeTarget("column", index);
+      announce("这一列已经完成，暂时不能再移动。");
+      return;
+    }
     if (kind === "column" && !topGroupSize(board.columns[index])) {
       event.preventDefault();
       return;
@@ -1561,11 +1888,16 @@
   ui.closeSaveFooterButton.addEventListener("click", closeSaveDialog);
   ui.saveSlotsList.addEventListener("click", handleSaveSlotAction);
   ui.settingsButton.addEventListener("click", openSettings);
+  ui.campaignButton.addEventListener("click", openCampaignDialog);
+  ui.closeCampaignButton.addEventListener("click", closeCampaignDialog);
+  ui.closeCampaignFooterButton.addEventListener("click", closeCampaignDialog);
+  ui.campaignLevelGrid.addEventListener("click", handleCampaignLevelClick);
   ui.closeSettingsButton.addEventListener("click", closeSettings);
   ui.cancelSettingsButton.addEventListener("click", closeSettings);
   ui.applySettingsButton.addEventListener("click", function () {
     if (isAnimating) return;
     settings = readSettingsForm();
+    campaignMode = false;
     closeSettings();
     setNewGame();
   });
@@ -1607,7 +1939,7 @@
   });
   ui.undoButton.addEventListener("click", undoMove);
   ui.newGameButton.addEventListener("click", setNewGame);
-  ui.victoryNewGameButton.addEventListener("click", setNewGame);
+  ui.victoryNewGameButton.addEventListener("click", handleVictoryAction);
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape" && selected && !isAnimating && !ui.settingsDialog.open) {
       clearSelection();
@@ -1619,6 +1951,9 @@
   });
   ui.saveDialog.addEventListener("click", function (event) {
     if (event.target === ui.saveDialog) closeSaveDialog();
+  });
+  ui.campaignDialog.addEventListener("click", function (event) {
+    if (event.target === ui.campaignDialog) closeCampaignDialog();
   });
 
   if (loadLocalData()) {
