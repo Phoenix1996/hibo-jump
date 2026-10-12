@@ -164,6 +164,12 @@ h1, h2, h3, p { margin-top: 0; }
 }
 .column:hover { transform: translateY(-2px); }
 .column:active { transform: translateY(0) scale(.985); }
+.columns.is-animating .column,
+.columns.is-animating .column:hover,
+.columns.is-animating .column:active,
+.reserve-slots.is-animating .reserve-slot,
+.reserve-slots.is-animating .reserve-slot:hover { transform: none; transition: none; }
+.columns.is-animating .column.is-selected .column-stack .tile.top-group { animation: none; transform: none; }
 .column:focus-visible { outline: 0; }
 .column:focus-visible .column-stack { box-shadow: 0 0 0 3px rgba(27, 148, 135, .26); }
 .column-meta { display: flex; width: 100%; align-items: center; justify-content: center; gap: 6px; color: #9baead; font-size: 9px; font-weight: 700; letter-spacing: .02em; }

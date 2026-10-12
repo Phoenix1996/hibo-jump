@@ -1022,8 +1022,8 @@
     const toElements = destinationElements(move).filter(Boolean);
     if (!fromElements.length || !toElements.length) return;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const duration = reducedMotion ? 80 : 190;
-    const stagger = reducedMotion ? 90 : 205;
+    const duration = reducedMotion ? 80 : 300;
+    const lift = 18;
     const animations = [];
     for (let step = 0; step < fromElements.length; step += 1) {
       const index = fromElements.length - 1 - step;
@@ -1038,13 +1038,14 @@
       if (typeof flight.animate === "function") {
         const animation = flight.animate([
           { transform: "translate(0px, 0px) scale(1)", offset: 0 },
-          { transform: "translate(0px, -14px) scale(1.06)", offset: 0.2 },
-          { transform: "translate(" + deltaX + "px, " + (deltaY - 9) + "px) scale(1.04)", offset: 0.78 },
+          { transform: "translate(0px, -" + lift + "px) scale(1.055)", offset: 0.16 },
+          { transform: "translate(" + deltaX + "px, -" + lift + "px) scale(1.04)", offset: 0.68 },
+          { transform: "translate(" + deltaX + "px, " + (deltaY - 5) + "px) scale(1.025)", offset: 0.9 },
           { transform: "translate(" + deltaX + "px, " + deltaY + "px) scale(1)", offset: 1 }
-        ], { duration: duration, delay: step * stagger, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards" });
+        ], { duration: duration, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards" });
         animations.push(animation.finished.catch(function () {}));
       } else {
-        animations.push(new Promise(function (resolve) { window.setTimeout(resolve, duration + step * stagger); }));
+        animations.push(new Promise(function (resolve) { window.setTimeout(resolve, duration); }));
       }
     }
     await Promise.all(animations);
@@ -1121,6 +1122,8 @@
   async function performMove(move) {
     if (isAnimating) return;
     isAnimating = true;
+    ui.columns.classList.add("is-animating");
+    ui.reserveSlots.classList.add("is-animating");
     ui.cancelSelectionButton.hidden = true;
     ui.themeSelect.disabled = true;
     ui.settingsButton.disabled = true;
@@ -1154,6 +1157,8 @@
     moveCount += 1;
     selected = null;
     isAnimating = false;
+    ui.columns.classList.remove("is-animating");
+    ui.reserveSlots.classList.remove("is-animating");
     ui.themeSelect.disabled = false;
     ui.settingsButton.disabled = false;
     ui.newGameButton.disabled = false;
