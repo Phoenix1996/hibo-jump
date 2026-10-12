@@ -12,7 +12,8 @@
         { id: "p3", name: "螃蟹", glyph: "🦀", color: "#e88373" },
         { id: "p4", name: "水母", glyph: "🪼", color: "#a184d0" },
         { id: "p5", name: "海星", glyph: "⭐", color: "#e6b84f" },
-        { id: "p6", name: "海龟", glyph: "🐢", color: "#61aa83" }
+        { id: "p6", name: "海龟", glyph: "🐢", color: "#61aa83" },
+        { id: "p7", name: "海豚", glyph: "🐬", color: "#62a9d4" }
       ]
     },
     fruit: {
@@ -24,20 +25,63 @@
         { id: "p3", name: "葡萄", glyph: "🍇", color: "#927dc1" },
         { id: "p4", name: "西瓜", glyph: "🍉", color: "#58a77d" },
         { id: "p5", name: "橙子", glyph: "🍊", color: "#e59b4c" },
-        { id: "p6", name: "樱桃", glyph: "🍒", color: "#ca5f6a" }
+        { id: "p6", name: "樱桃", glyph: "🍒", color: "#ca5f6a" },
+        { id: "p7", name: "梨子", glyph: "🍐", color: "#85ad57" }
+      ]
+    },
+    pokemon: {
+      id: "pokemon",
+      name: "宝可梦主题",
+      patterns: [
+        { id: "p1", name: "超梦", glyph: "💜", color: "#a078c8", image: "assets/themes/pokemon/超梦.png" },
+        { id: "p2", name: "杰尼龟", glyph: "💧", color: "#65a9d1", image: "assets/themes/pokemon/杰尼龟.png" },
+        { id: "p3", name: "可达鸭", glyph: "🦆", color: "#e8bd4e", image: "assets/themes/pokemon/可达鸭.png" },
+        { id: "p4", name: "妙蛙种子", glyph: "🌱", color: "#67a66b", image: "assets/themes/pokemon/妙蛙种子 (2).png" },
+        { id: "p5", name: "皮卡丘", glyph: "⚡", color: "#e5bb43", image: "assets/themes/pokemon/皮卡丘.png" },
+        { id: "p6", name: "仙子伊布", glyph: "🎀", color: "#cb8cba", image: "assets/themes/pokemon/仙子伊布.png" },
+        { id: "p7", name: "小火龙", glyph: "🔥", color: "#e58b55", image: "assets/themes/pokemon/小火龙.png" }
+      ]
+    },
+    "pokemon-2": {
+      id: "pokemon-2",
+      name: "宝可梦徽章主题",
+      patterns: [
+        { id: "p1", name: "徽章伙伴 01", glyph: "🐉", color: "#d8aa62", image: "assets/themes/pokemon-2/10662101-a808-4b0b-80e0-83e38c90b9ca.png" },
+        { id: "p2", name: "徽章伙伴 02", glyph: "🍃", color: "#78b77a", image: "assets/themes/pokemon-2/32dfc1c7-085d-462a-a9ab-502df96fd390.png" },
+        { id: "p3", name: "徽章伙伴 03", glyph: "😴", color: "#7bb6c4", image: "assets/themes/pokemon-2/340914f4-d72f-4568-b705-46a3c206f744.png" },
+        { id: "p4", name: "徽章伙伴 04", glyph: "🌙", color: "#8f7fbd", image: "assets/themes/pokemon-2/677d193c-1e67-44b5-a854-1e5eae5970bf.png" },
+        { id: "p5", name: "徽章伙伴 05", glyph: "🔥", color: "#dc7452", image: "assets/themes/pokemon-2/74ea19f1-43bc-496f-965d-6f4472eda4c5.png" },
+        { id: "p6", name: "徽章伙伴 06", glyph: "✨", color: "#d783b7", image: "assets/themes/pokemon-2/7695ac6b-e28d-4404-8bb9-e6e5ed611fbd.png" },
+        { id: "p7", name: "徽章伙伴 07", glyph: "💙", color: "#628ac3", image: "assets/themes/pokemon-2/d7a28cea-f41a-4579-9e25-ee6070c7429c.png" }
+      ]
+    },
+    digimon: {
+      id: "digimon",
+      name: "数码宝贝主题",
+      patterns: [
+        { id: "p1", name: "数码伙伴 01", glyph: "🌿", color: "#81aa67", image: "assets/themes/digimon/01c6440d-c38e-4a00-ba88-f68bc7a3ffc1.png" },
+        { id: "p2", name: "数码伙伴 02", glyph: "🦊", color: "#daa955", image: "assets/themes/digimon/0cbedb23-3712-4f74-8bbf-31f2116362eb.png" },
+        { id: "p3", name: "数码伙伴 03", glyph: "🔥", color: "#dc9857", image: "assets/themes/digimon/8baa6bc8-d4a5-492f-bec5-5721c9a1985c.png" },
+        { id: "p4", name: "数码伙伴 04", glyph: "🌸", color: "#d98eb0", image: "assets/themes/digimon/932aab38-b902-4451-9689-8dde7b6ce3a7.png" },
+        { id: "p5", name: "数码伙伴 05", glyph: "🐺", color: "#8e9db2", image: "assets/themes/digimon/9b8da726-e7d9-44f9-8832-f5fcdcd962b2.png" },
+        { id: "p6", name: "数码伙伴 06", glyph: "⚪", color: "#afc5dc", image: "assets/themes/digimon/b78e61e2-7d47-45ef-8467-a1c6163931fe.png" },
+        { id: "p7", name: "数码伙伴 07", glyph: "💗", color: "#dd8cae", image: "assets/themes/digimon/ff3a266e-fcbc-40e2-9615-666a457124c3.png" }
       ]
     }
   };
 
   const PRESETS = {
-    easy: { label: "简单", patternCount: 3, capacity: 4, reserveCount: 4, shuffleSteps: 20 },
-    normal: { label: "普通", patternCount: 4, capacity: 4, reserveCount: 2, shuffleSteps: 45 },
-    hard: { label: "困难", patternCount: 5, capacity: 4, reserveCount: 0, shuffleSteps: 90 }
+    easy: { label: "简单", patternCount: 3, capacity: 4, reserveCount: 4, shuffleSteps: 20, mysteryCount: 0, fixedCount: 0 },
+    normal: { label: "普通", patternCount: 4, capacity: 4, reserveCount: 2, shuffleSteps: 45, mysteryCount: 4, fixedCount: 1 },
+    hard: { label: "困难", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 360, mysteryCount: 12, fixedCount: 3 }
   };
 
-  const DEFAULT_SETTINGS = { difficulty: "normal", patternCount: 4, capacity: 4, reserveCount: 2, shuffleSteps: 45 };
+  const DEFAULT_SETTINGS = { difficulty: "hard", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 360, mysteryCount: 12, fixedCount: 3 };
+  const STORAGE_KEY = "haibao-jump.local.v1";
+  const SAVE_SLOT_COUNT = 3;
   const ui = {
     themeSelect: document.getElementById("themeSelect"),
+    floatingToken: document.getElementById("floatingToken"),
     settingsButton: document.getElementById("settingsButton"),
     difficultyBadge: document.getElementById("levelBadge"),
     boardCaption: document.getElementById("boardCaption"),
@@ -54,6 +98,10 @@
     victoryBanner: document.getElementById("victoryBanner"),
     victoryNewGameButton: document.getElementById("victoryNewGameButton"),
     settingsDialog: document.getElementById("settingsDialog"),
+    guessDialog: document.getElementById("guessDialog"),
+    guessChoices: document.getElementById("guessChoices"),
+    guessFeedback: document.getElementById("guessFeedback"),
+    closeGuessButton: document.getElementById("closeGuessButton"),
     closeSettingsButton: document.getElementById("closeSettingsButton"),
     cancelSettingsButton: document.getElementById("cancelSettingsButton"),
     applySettingsButton: document.getElementById("applySettingsButton"),
@@ -63,7 +111,21 @@
     capacityInput: document.getElementById("capacityInput"),
     reserveCountInput: document.getElementById("reserveCountInput"),
     shuffleStepsInput: document.getElementById("shuffleStepsInput"),
-    flightLayer: document.getElementById("flightLayer")
+    mysteryCountInput: document.getElementById("mysteryCountInput"),
+    fixedCountInput: document.getElementById("fixedCountInput"),
+    undoButton: document.getElementById("undoButton"),
+    shuffleButton: document.getElementById("shuffleButton"),
+    flightLayer: document.getElementById("flightLayer"),
+    celebrationLayer: document.getElementById("celebrationLayer"),
+    soundToggle: document.getElementById("soundToggle"),
+    soundLabel: document.getElementById("soundLabel"),
+    saveButton: document.getElementById("saveButton"),
+    saveButtonLabel: document.getElementById("saveButtonLabel"),
+    saveDialog: document.getElementById("saveDialog"),
+    closeSaveButton: document.getElementById("closeSaveButton"),
+    closeSaveFooterButton: document.getElementById("closeSaveFooterButton"),
+    saveSlotsList: document.getElementById("saveSlotsList"),
+    saveStorageStatus: document.getElementById("saveStorageStatus")
   };
 
   let settings = Object.assign({}, DEFAULT_SETTINGS);
@@ -72,19 +134,59 @@
   let initialBoard = null;
   let selected = null;
   let moveCount = 0;
+  let moveHistory = [];
+  let guessingColumnIndex = null;
   let isAnimating = false;
   let suppressClickUntil = 0;
+  let activeSaveId = 0;
+  let saveSlots = new Array(SAVE_SLOT_COUNT).fill(null);
+  let soundEnabled = true;
+  let audioContext = null;
+  let victoryCelebrated = false;
+  let storageAvailable = true;
 
   function getTheme() {
     return THEMES[currentThemeId] || THEMES.ocean;
   }
 
   function getPattern(patternId) {
+    patternId = actualPatternId(patternId);
     const theme = getTheme();
     for (let i = 0; i < theme.patterns.length; i += 1) {
       if (theme.patterns[i].id === patternId) return theme.patterns[i];
     }
     return theme.patterns[0];
+  }
+
+  function actualPatternId(token) {
+    return typeof token === "string" && /^[?!#]/.test(token) ? token.slice(1) : token;
+  }
+
+  function isMysteryToken(token) {
+    return typeof token === "string" && token.charAt(0) === "?";
+  }
+
+  function isFixedToken(token) {
+    return typeof token === "string" && (token.charAt(0) === "!" || token.charAt(0) === "#");
+  }
+
+  function isUnknownFixedToken(token) {
+    return typeof token === "string" && token.charAt(0) === "!";
+  }
+
+  function revealTopToken(column) {
+    if (!column.length) return;
+    const topIndex = column.length - 1;
+    if (isMysteryToken(column[topIndex])) column[topIndex] = actualPatternId(column[topIndex]);
+  }
+
+  function columnIsSorted(column, requireGuessedFixed) {
+    if (column.length !== settings.capacity || !column.length) return false;
+    const targetPattern = actualPatternId(column[0]);
+    return column.every(function (token) {
+      return actualPatternId(token) === targetPattern &&
+        (!requireGuessedFixed || !isUnknownFixedToken(token));
+    });
   }
 
   function cloneBoard(source) {
@@ -94,16 +196,365 @@
     };
   }
 
+  function hasScatteredFixedCells(sourceBoard) {
+    return Boolean(sourceBoard && Array.isArray(sourceBoard.columns) &&
+      sourceBoard.columns.filter(function (column) {
+        return Array.isArray(column) && column.some(isFixedToken);
+      }).length > 1);
+  }
+
+  function normalizeSettings(source) {
+    source = source && typeof source === "object" ? source : DEFAULT_SETTINGS;
+    function bounded(value, fallback, min, max) {
+      const parsed = Number.parseInt(value, 10);
+      return Number.isFinite(parsed) ? Math.max(min, Math.min(max, parsed)) : fallback;
+    }
+    const difficulty = PRESETS[source.difficulty] ? source.difficulty : "custom";
+    if (difficulty === "hard") {
+      return {
+        difficulty: "hard",
+        patternCount: PRESETS.hard.patternCount,
+        capacity: PRESETS.hard.capacity,
+        reserveCount: PRESETS.hard.reserveCount,
+        shuffleSteps: PRESETS.hard.shuffleSteps,
+        mysteryCount: PRESETS.hard.mysteryCount,
+        fixedCount: PRESETS.hard.fixedCount
+      };
+    }
+    const patternCount = bounded(source.patternCount, DEFAULT_SETTINGS.patternCount, 2, 7);
+    const capacity = bounded(source.capacity, DEFAULT_SETTINGS.capacity, 2, 12);
+    return {
+      difficulty: difficulty,
+      patternCount: patternCount,
+      capacity: capacity,
+      reserveCount: bounded(source.reserveCount, DEFAULT_SETTINGS.reserveCount, 0, 8),
+      shuffleSteps: bounded(source.shuffleSteps, DEFAULT_SETTINGS.shuffleSteps, 10, 600),
+      mysteryCount: bounded(source.mysteryCount, DEFAULT_SETTINGS.mysteryCount, 0, 24),
+      fixedCount: bounded(source.fixedCount, DEFAULT_SETTINGS.fixedCount, 0, Math.min(3, capacity - 1))
+    };
+  }
+
+  function normalizeBoard(source, boardSettings) {
+    if (!source || !Array.isArray(source.columns) || !Array.isArray(source.reserve)) return null;
+    const reserve = source.reserve.slice();
+    if (boardSettings.difficulty === "hard" && reserve.length < boardSettings.reserveCount) {
+      while (reserve.length < boardSettings.reserveCount) reserve.push(null);
+    }
+    if (source.columns.length !== boardSettings.patternCount + 1 || reserve.length !== boardSettings.reserveCount) return null;
+    const validToken = function (token) {
+      if (typeof token !== "string") return false;
+      const match = token.match(/^([?!#]?)(p[1-7])$/);
+      return Boolean(match && Number(match[2].slice(1)) <= boardSettings.patternCount);
+    };
+    const columns = source.columns.map(function (column) {
+      return Array.isArray(column) && column.length <= boardSettings.capacity && column.every(validToken) ? column.slice() : null;
+    });
+    if (columns.some(function (column) { return !column; })) return null;
+    if (!reserve.every(function (token) { return token === null || (validToken(token) && !/^[?!#]/.test(token)); })) return null;
+    return { columns: columns, reserve: reserve };
+  }
+
+  function normalizeSnapshot(source) {
+    if (!source || typeof source !== "object") return null;
+    const snapshotSettings = normalizeSettings(source.settings);
+    let snapshotBoard = normalizeBoard(source.board, snapshotSettings);
+    const snapshotInitial = normalizeBoard(source.initialBoard, snapshotSettings);
+    if (!snapshotBoard) return null;
+    const moveCount = Math.max(0, Math.min(999999, Number.parseInt(source.moveCount, 10) || 0));
+    let initialBoard = snapshotInitial || cloneBoard(snapshotBoard);
+    let migratedFixedLayout = false;
+    if (moveCount === 0 && JSON.stringify(snapshotBoard) === JSON.stringify(initialBoard) && hasScatteredFixedCells(snapshotBoard)) {
+      snapshotBoard = buildSolvableBoard(snapshotSettings);
+      initialBoard = cloneBoard(snapshotBoard);
+      migratedFixedLayout = true;
+    }
+    return {
+      settings: snapshotSettings,
+      themeId: THEMES[source.themeId] ? source.themeId : "ocean",
+      board: snapshotBoard,
+      initialBoard: initialBoard,
+      moveCount: moveCount,
+      migratedFixedLayout: migratedFixedLayout,
+      savedAt: Number(source.savedAt) || Date.now()
+    };
+  }
+
+  function currentSnapshot() {
+    return {
+      settings: Object.assign({}, settings),
+      themeId: currentThemeId,
+      board: cloneBoard(board),
+      initialBoard: cloneBoard(initialBoard || board),
+      moveCount: moveCount,
+      savedAt: Date.now()
+    };
+  }
+
+  function restoreSnapshot(snapshot) {
+    const normalized = normalizeSnapshot(snapshot);
+    if (!normalized) return false;
+    settings = normalized.settings;
+    currentThemeId = normalized.themeId;
+    board = normalized.board;
+    initialBoard = normalized.initialBoard;
+    moveCount = normalized.moveCount;
+    selected = null;
+    moveHistory = [];
+    victoryCelebrated = isVictory();
+    return true;
+  }
+
+  function loadLocalData() {
+    let stored = null;
+    try { stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null"); } catch (error) { stored = null; }
+    if (!stored || typeof stored !== "object") return false;
+    settings = normalizeSettings(stored.settings);
+    currentThemeId = THEMES[stored.themeId] ? stored.themeId : "ocean";
+    soundEnabled = stored.soundEnabled !== false;
+    activeSaveId = Math.max(0, Math.min(SAVE_SLOT_COUNT - 1, Number.parseInt(stored.activeSaveId, 10) || 0));
+    saveSlots = Array.from({ length: SAVE_SLOT_COUNT }, function (_, index) {
+      return normalizeSnapshot(Array.isArray(stored.saveSlots) ? stored.saveSlots[index] : null);
+    });
+    const activeLayoutMigrated = Boolean(saveSlots[activeSaveId] && saveSlots[activeSaveId].migratedFixedLayout);
+    const restored = Boolean(saveSlots[activeSaveId] && restoreSnapshot(saveSlots[activeSaveId]));
+    if (restored && activeLayoutMigrated) persistLocalData(true);
+    return restored;
+  }
+
+  function persistLocalData(saveCurrentGame) {
+    if (saveCurrentGame && board && initialBoard) saveSlots[activeSaveId] = currentSnapshot();
+    const payload = {
+      version: 1,
+      activeSaveId: activeSaveId,
+      settings: Object.assign({}, settings),
+      themeId: currentThemeId,
+      soundEnabled: soundEnabled,
+      saveSlots: saveSlots.map(function (snapshot) {
+        if (!snapshot) return null;
+        const storedSnapshot = Object.assign({}, snapshot);
+        delete storedSnapshot.migratedFixedLayout;
+        return storedSnapshot;
+      })
+    };
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      storageAvailable = true;
+    } catch (error) {
+      storageAvailable = false;
+    }
+    ui.saveStorageStatus.textContent = storageAvailable ? "本机自动保存已开启" : "浏览器未允许本机保存";
+    updateSaveButton();
+  }
+
+  function updateSaveButton() {
+    ui.saveButtonLabel.textContent = "存档 " + (activeSaveId + 1);
+    ui.saveButton.setAttribute("aria-label", "选择存档，当前存档 " + (activeSaveId + 1));
+    ui.soundToggle.setAttribute("aria-pressed", String(soundEnabled));
+    ui.soundToggle.setAttribute("aria-label", soundEnabled ? "关闭音效" : "开启音效");
+    ui.soundToggle.title = soundEnabled ? "关闭音效" : "开启音效";
+    ui.soundLabel.textContent = soundEnabled ? "音效" : "静音";
+  }
+
+  function formatSaveDate(timestamp) {
+    try {
+      return new Date(timestamp).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch (error) {
+      return "本机存档";
+    }
+  }
+
+  function renderSaveDialog() {
+    ui.saveSlotsList.innerHTML = saveSlots.map(function (snapshot, index) {
+      const isCurrent = index === activeSaveId;
+      const slotClass = "save-slot-card" + (isCurrent ? " is-current" : "") + (snapshot ? " has-save" : " is-empty");
+      const title = "存档 " + (index + 1) + (isCurrent ? " · 当前" : "");
+      let details = "空存档 · 可从当前进度另存，或开一局新的挑战";
+      if (snapshot) {
+        const savedDifficulty = snapshot.settings.difficulty === "custom"
+          ? "自定义"
+          : PRESETS[snapshot.settings.difficulty].label;
+        details = savedDifficulty + " · " + THEMES[snapshot.themeId].name + " · " +
+          snapshot.moveCount + " 步 · " + formatSaveDate(snapshot.savedAt);
+      }
+      const status = isCurrent ? "正在游玩" : (snapshot ? "已保存" : "空存档");
+      const primaryLabel = !snapshot ? "另存当前进度" : (isCurrent ? "继续当前游戏" : "读取此存档");
+      const primaryAction = !snapshot ? "copy" : "load";
+      let actions = '<button class="save-slot-action save-primary" type="button" data-save-action="' + primaryAction + '" data-save-index="' + index + '">' + primaryLabel + '</button>';
+      if (!snapshot) {
+        actions += '<button class="save-slot-action" type="button" data-save-action="new" data-save-index="' + index + '">以当前设置新开</button>';
+      } else if (!isCurrent) {
+        actions += '<button class="save-slot-action" type="button" data-save-action="copy" data-save-index="' + index + '">覆盖为当前进度</button>' +
+          '<button class="save-slot-delete" type="button" data-save-action="delete" data-save-index="' + index + '" aria-label="删除存档 ' + (index + 1) + '">删除</button>';
+      } else {
+        actions += '<button class="save-slot-action" type="button" data-save-action="new" data-save-index="' + index + '">本档重新开局</button>';
+      }
+      return '<article class="' + slotClass + '" role="listitem"><div class="save-slot-top"><div><strong>' + title +
+        '</strong><small>' + escapeHtml(details) + '</small></div><span class="save-slot-status">' + status +
+        '</span></div><div class="save-slot-actions">' + actions + '</div></article>';
+    }).join("");
+    ui.saveStorageStatus.textContent = storageAvailable ? "本机自动保存已开启" : "浏览器未允许本机保存";
+  }
+
+  function openSaveDialog() {
+    if (isAnimating) return;
+    renderSaveDialog();
+    if (typeof ui.saveDialog.showModal === "function") ui.saveDialog.showModal();
+    else ui.saveDialog.setAttribute("open", "");
+  }
+
+  function closeSaveDialog() {
+    if (typeof ui.saveDialog.close === "function") ui.saveDialog.close();
+    else ui.saveDialog.removeAttribute("open");
+  }
+
+  function createGameInSlot(index) {
+    activeSaveId = index;
+    selected = null;
+    moveCount = 0;
+    moveHistory = [];
+    board = buildSolvableBoard(settings);
+    initialBoard = cloneBoard(board);
+    victoryCelebrated = false;
+    clearCelebration();
+    closeSaveDialog();
+    render();
+    persistLocalData(true);
+    announce("已在存档 " + (index + 1) + " 开始新一局。");
+  }
+
+  function loadSaveSlot(index) {
+    if (index === activeSaveId) {
+      closeSaveDialog();
+      announce("这就是当前正在游玩的存档。");
+      return;
+    }
+    const snapshot = saveSlots[index];
+    if (!snapshot || !restoreSnapshot(snapshot)) return;
+    activeSaveId = index;
+    closeSaveDialog();
+    render();
+    persistLocalData(true);
+    announce("已读取存档 " + (index + 1) + "，接着上次继续。");
+  }
+
+  function handleSaveSlotAction(event) {
+    const button = event.target.closest("[data-save-action]");
+    if (!button || !ui.saveSlotsList.contains(button) || isAnimating) return;
+    const index = Number(button.dataset.saveIndex);
+    if (index < 0 || index >= SAVE_SLOT_COUNT) return;
+    const action = button.dataset.saveAction;
+    if (action === "load") {
+      loadSaveSlot(index);
+    } else if (action === "copy") {
+      if (saveSlots[index] && !window.confirm("要用当前进度覆盖存档 " + (index + 1) + " 吗？")) return;
+      saveSlots[index] = currentSnapshot();
+      persistLocalData(false);
+      renderSaveDialog();
+      announce("当前进度已保存到存档 " + (index + 1) + "。");
+    } else if (action === "new") {
+      if (saveSlots[index] && !window.confirm("在存档 " + (index + 1) + " 重新开局会替换这份进度，继续吗？")) return;
+      createGameInSlot(index);
+    } else if (action === "delete") {
+      if (!window.confirm("删除存档 " + (index + 1) + "？此操作无法撤回。")) return;
+      saveSlots[index] = null;
+      if (index === activeSaveId) {
+        const nextIndex = saveSlots.findIndex(function (slot) { return Boolean(slot); });
+        if (nextIndex >= 0) {
+          activeSaveId = nextIndex;
+          restoreSnapshot(saveSlots[nextIndex]);
+        } else {
+          activeSaveId = (index + 1) % SAVE_SLOT_COUNT;
+          board = buildSolvableBoard(settings);
+          initialBoard = cloneBoard(board);
+          moveCount = 0;
+          moveHistory = [];
+          victoryCelebrated = false;
+          clearCelebration();
+        }
+        render();
+        persistLocalData(true);
+      } else {
+        persistLocalData(false);
+      }
+      renderSaveDialog();
+    }
+  }
+
+  function playSound(kind, variant) {
+    if (!soundEnabled) return;
+    const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextConstructor) return;
+    try {
+      if (!audioContext) audioContext = new AudioContextConstructor();
+      if (audioContext.state === "suspended") audioContext.resume();
+      const notes = kind === "win" ? [523.25, 659.25, 783.99, 1046.5] :
+        kind === "wrong" ? [246.94, 196] :
+        kind === "stash" ? [493.88] :
+        kind === "reveal" ? [587.33, 783.99] :
+        kind === "tile" ? [392 + ((Number(variant) || 0) % 7) * 46] : [659.25];
+      const peakVolume = kind === "win" ? 0.055 : kind === "tile" ? 0.018 : 0.035;
+      const noteLength = kind === "win" ? 0.28 : kind === "tile" ? 0.085 : 0.16;
+      notes.forEach(function (frequency, index) {
+        const start = audioContext.currentTime + index * (kind === "win" ? 0.115 : 0.07);
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = kind === "wrong" ? "triangle" : "sine";
+        oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(peakVolume, start + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + noteLength);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(start);
+        oscillator.stop(start + noteLength + 0.015);
+      });
+    } catch (error) {
+      // Audio is optional; gameplay remains available if the browser blocks Web Audio.
+    }
+  }
+
+  function clearCelebration() {
+    ui.celebrationLayer.innerHTML = "";
+  }
+
+  function showVictoryCelebration() {
+    if (victoryCelebrated) return;
+    victoryCelebrated = true;
+    clearCelebration();
+    playSound("win");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const colors = ["#ffcf63", "#ff8c78", "#65c9af", "#80a9f4", "#d897d2", "#fff1b4"];
+    const pieces = 52;
+    for (let index = 0; index < pieces; index += 1) {
+      const piece = document.createElement("span");
+      const delay = Math.random() * 0.42;
+      const duration = 2.4 + Math.random() * 1.45;
+      piece.className = "confetti-piece" + (index % 4 === 0 ? " is-round" : "");
+      piece.style.left = (3 + Math.random() * 94) + "vw";
+      piece.style.backgroundColor = colors[randomIndex(colors.length)];
+      piece.style.width = (6 + Math.random() * 7) + "px";
+      piece.style.height = (9 + Math.random() * 9) + "px";
+      piece.style.setProperty("--drift", ((Math.random() * 2 - 1) * 155) + "px");
+      piece.style.setProperty("--spin", ((Math.random() * 2 - 1) * 900) + "deg");
+      piece.style.animationDuration = duration + "s";
+      piece.style.animationDelay = delay + "s";
+      ui.celebrationLayer.appendChild(piece);
+      window.setTimeout(function () { piece.remove(); }, (delay + duration) * 1000 + 120);
+    }
+  }
+
   function randomIndex(max) {
     return Math.floor(Math.random() * max);
   }
 
   function topGroupSize(column) {
     if (!column.length) return 0;
-    const patternId = column[column.length - 1];
+    const topToken = column[column.length - 1];
+    if (isFixedToken(topToken)) return 0;
+    const patternId = actualPatternId(topToken);
     let count = 1;
     for (let index = column.length - 2; index >= 0; index -= 1) {
-      if (column[index] !== patternId) break;
+      if (isFixedToken(column[index]) || actualPatternId(column[index]) !== patternId) break;
       count += 1;
     }
     return count;
@@ -111,71 +562,105 @@
 
   function buildSolvableBoard(currentSettings) {
     const columns = [];
+    const availablePatterns = [];
+    for (let index = 0; index < currentSettings.patternCount; index += 1) availablePatterns.push(index + 1);
+    for (let index = availablePatterns.length - 1; index > 0; index -= 1) {
+      const swapIndex = randomIndex(index + 1);
+      const value = availablePatterns[index];
+      availablePatterns[index] = availablePatterns[swapIndex];
+      availablePatterns[swapIndex] = value;
+    }
+    const fixedCount = Math.min(currentSettings.fixedCount, currentSettings.capacity - 1);
+    const fixedPattern = fixedCount ? "p" + availablePatterns[0] : null;
     for (let patternIndex = 0; patternIndex < currentSettings.patternCount; patternIndex += 1) {
       const patternId = "p" + (patternIndex + 1);
-      columns.push(Array(currentSettings.capacity).fill(patternId));
+      const column = Array(currentSettings.capacity).fill(patternId);
+      if (patternId === fixedPattern) {
+        for (let fixedIndex = 0; fixedIndex < fixedCount; fixedIndex += 1) {
+          column[fixedIndex] = "!" + patternId;
+        }
+      }
+      columns.push(column);
     }
     columns.push([]);
 
-    let previousReverseMove = null;
+    const recentReverseMoves = [];
     for (let step = 0; step < currentSettings.shuffleSteps; step += 1) {
       const candidates = [];
       for (let donorIndex = 0; donorIndex < columns.length; donorIndex += 1) {
         const donor = columns[donorIndex];
-        if (!donor.length) continue;
-        const patternId = donor[donor.length - 1];
+        if (!donor.length || (isFixedToken(donor[0]) && donor.length === 1)) continue;
+        const patternId = actualPatternId(donor[donor.length - 1]);
         const availableGroup = topGroupSize(donor);
 
         for (let targetIndex = 0; targetIndex < columns.length; targetIndex += 1) {
           if (targetIndex === donorIndex) continue;
           const target = columns[targetIndex];
-          if (target.length && target[target.length - 1] === patternId) continue;
+          // Keep the reverse path invertible: don't merge this group into an identical top group.
+          if (target.length && actualPatternId(target[target.length - 1]) === patternId) continue;
           const freeCapacity = currentSettings.capacity - target.length;
           const maxCount = Math.min(availableGroup, freeCapacity);
-          for (let count = 1; count <= maxCount; count += 1) {
+          if (maxCount >= 1) {
             candidates.push({
               donorIndex: donorIndex,
               targetIndex: targetIndex,
               patternId: patternId,
-              count: count
+              count: 1
             });
           }
         }
       }
 
-      let choices = candidates;
-      if (previousReverseMove) {
-        const withoutImmediateUndo = candidates.filter(function (candidate) {
-          return !(
-            candidate.donorIndex === previousReverseMove.targetIndex &&
-            candidate.targetIndex === previousReverseMove.donorIndex &&
-            candidate.patternId === previousReverseMove.patternId &&
-            candidate.count === previousReverseMove.count
-          );
+      const choices = candidates.filter(function (candidate) {
+        return !recentReverseMoves.some(function (previousMove) {
+          return candidate.donorIndex === previousMove.targetIndex &&
+            candidate.targetIndex === previousMove.donorIndex &&
+            candidate.patternId === previousMove.patternId;
         });
-        if (withoutImmediateUndo.length) choices = withoutImmediateUndo;
-      }
-      if (!choices.length) break;
+      });
+      const availableChoices = choices.length ? choices : candidates;
+      if (!availableChoices.length) break;
 
-      const chosen = choices[randomIndex(choices.length)];
+      const chosen = availableChoices[randomIndex(availableChoices.length)];
       const donor = columns[chosen.donorIndex];
       const group = donor.splice(donor.length - chosen.count, chosen.count);
       columns[chosen.targetIndex].push.apply(columns[chosen.targetIndex], group);
-      previousReverseMove = chosen;
+      recentReverseMoves.push(chosen);
+      if (recentReverseMoves.length > 5) recentReverseMoves.shift();
     }
 
     const alreadySolved = columns.filter(function (column) {
       return column.length === currentSettings.capacity &&
-        column.every(function (patternId) { return patternId === column[0]; });
+        column.every(function (token) { return actualPatternId(token) === actualPatternId(column[0]); });
     }).length === currentSettings.patternCount;
     if (alreadySolved) {
       const emptyIndex = columns.findIndex(function (column) { return column.length === 0; });
-      const sourceIndex = columns.findIndex(function (column) { return column.length === currentSettings.capacity; });
+      const sourceIndex = columns.findIndex(function (column) {
+        return column.length === currentSettings.capacity && topGroupSize(column) > 0;
+      });
       if (emptyIndex >= 0 && sourceIndex >= 0) {
         const patternId = columns[sourceIndex].pop();
         columns[emptyIndex].push(patternId);
       }
     }
+
+    const mysteryCandidates = [];
+    columns.forEach(function (column, columnIndex) {
+      for (let level = 0; level < column.length - 1; level += 1) {
+        if (!isFixedToken(column[level])) mysteryCandidates.push({ columnIndex: columnIndex, level: level });
+      }
+    });
+    for (let index = mysteryCandidates.length - 1; index > 0; index -= 1) {
+      const swapIndex = randomIndex(index + 1);
+      const candidate = mysteryCandidates[index];
+      mysteryCandidates[index] = mysteryCandidates[swapIndex];
+      mysteryCandidates[swapIndex] = candidate;
+    }
+    mysteryCandidates.slice(0, Math.min(currentSettings.mysteryCount, mysteryCandidates.length)).forEach(function (candidate) {
+      const column = columns[candidate.columnIndex];
+      column[candidate.level] = "?" + actualPatternId(column[candidate.level]);
+    });
+    columns.forEach(revealTopToken);
 
     return {
       columns: columns,
@@ -185,20 +670,12 @@
 
   function currentSortedCount() {
     if (!board) return 0;
-    return board.columns.filter(function (column) {
-      return column.length === settings.capacity && column.every(function (patternId) {
-        return patternId === column[0];
-      });
-    }).length;
+    return board.columns.filter(function (column) { return columnIsSorted(column, true); }).length;
   }
 
   function isVictory() {
     if (!board || board.reserve.some(function (item) { return item !== null; })) return false;
-    const completed = board.columns.filter(function (column) {
-      return column.length === settings.capacity && column.every(function (patternId) {
-        return patternId === column[0];
-      });
-    });
+    const completed = board.columns.filter(function (column) { return columnIsSorted(column, true); });
     const emptyColumns = board.columns.filter(function (column) { return column.length === 0; });
     return completed.length === settings.patternCount && emptyColumns.length === 1;
   }
@@ -214,11 +691,20 @@
     });
   }
 
+  function patternVisualHtml(pattern) {
+    if (!pattern.image) return escapeHtml(pattern.glyph);
+    return '<img class="pattern-art" src="' + escapeHtml(encodeURI(pattern.image)) + '" alt="' +
+      escapeHtml(pattern.glyph) + '" draggable="false">';
+  }
+
   function columnDescription(column, index) {
     if (!column.length) return "第 " + (index + 1) + " 列，空列，可接收任何图案";
-    const topPattern = getPattern(column[column.length - 1]);
-    const labels = column.map(function (patternId) { return getPattern(patternId).name; });
-    return "第 " + (index + 1) + " 列，顶部是" + topPattern.name + "，共 " + column.length + " 个；" + labels.join("、");
+    const topToken = column[column.length - 1];
+    const topLabel = isMysteryToken(topToken) || isUnknownFixedToken(topToken)
+      ? "未知元素"
+      : getPattern(topToken).name;
+    const fixedCount = column.filter(isFixedToken).length;
+    return "第 " + (index + 1) + " 列，顶部是" + topLabel + "，共 " + column.length + " 个；底部固定格 " + fixedCount + " 个";
   }
 
   function canMoveToColumn(source, targetIndex) {
@@ -226,14 +712,14 @@
     if (source.kind === "column" && source.index === targetIndex) return false;
     const target = board.columns[targetIndex];
     const movingCount = source.kind === "column"
-      ? topGroupSize(board.columns[source.index])
+      ? Math.min(topGroupSize(board.columns[source.index]), settings.capacity - target.length)
       : 1;
     const sourcePattern = source.kind === "column"
       ? board.columns[source.index][board.columns[source.index].length - 1]
       : board.reserve[source.index];
     if (!movingCount || !sourcePattern) return false;
     if (target.length + movingCount > settings.capacity) return false;
-    return !target.length || target[target.length - 1] === sourcePattern;
+    return true;
   }
 
   function targetIsValid(source, targetKind, targetIndex) {
@@ -249,6 +735,9 @@
   function render() {
     if (!board) return;
     ui.themeSelect.value = currentThemeId;
+    const featuredPattern = getPattern("p1");
+    ui.floatingToken.classList.toggle("has-art", Boolean(featuredPattern.image));
+    ui.floatingToken.innerHTML = patternVisualHtml(featuredPattern);
     const completedCount = currentSortedCount();
     const totalPatterns = settings.patternCount;
 
@@ -257,13 +746,20 @@
       const slots = [];
       for (let level = 0; level < settings.capacity; level += 1) {
         if (level < column.length) {
-          const pattern = getPattern(column[level]);
+          const token = column[level];
+          const pattern = getPattern(token);
           const isTopGroup = level >= column.length - groupSize;
+          const isHidden = isMysteryToken(token) || isUnknownFixedToken(token);
+          const isFixed = isFixedToken(token);
+          const tileClass = "stack-cell tile" + (isTopGroup ? " top-group" : "") +
+            (isFixed ? " is-fixed-cell" : "") + (isHidden ? " mystery-hidden" : "") +
+            (!isHidden && pattern.image ? " has-art" : "");
           slots.push(
-            '<span class="stack-cell tile' + (isTopGroup ? " top-group" : "") + '" ' +
-            'data-pattern-id="' + escapeHtml(pattern.id) + '" data-level="' + level + '" ' +
-            'style="--pattern-color:' + escapeHtml(pattern.color) + '" aria-hidden="true">' +
-            escapeHtml(pattern.glyph) + "</span>"
+            '<span class="' + tileClass + '" ' +
+            'data-pattern-id="' + (isHidden ? "" : escapeHtml(pattern.id)) + '" data-level="' + level + '"' +
+            (isFixed ? ' data-fixed-column="' + columnIndex + '"' : '') + ' ' +
+            'style="' + (isHidden ? "" : '--pattern-color:' + escapeHtml(pattern.color)) + '" aria-hidden="true">' +
+            (isHidden ? (isFixed ? "" : "?") : patternVisualHtml(pattern)) + "</span>"
           );
         } else {
           slots.push('<span class="stack-cell is-empty" data-level="' + level + '" aria-hidden="true"></span>');
@@ -272,11 +768,14 @@
 
       const isSelected = selected && selected.kind === "column" && selected.index === columnIndex;
       const validTarget = selected && targetIsValid(selected, "column", columnIndex);
-      const title = column.length ? "移动顶部的 " + getPattern(column[column.length - 1]).name + " 图案组" : "空列";
+      const canDrag = topGroupSize(column) > 0;
+      const title = column.length
+        ? (canDrag ? "移动顶部图案组" : "只有固定格，不能移动")
+        : "空列";
       return (
         '<button class="column' + (column.length ? "" : " is-empty") +
           (isSelected ? " is-selected" : "") + (validTarget ? " is-target is-valid-target" : "") + '" ' +
-          'type="button" data-kind="column" data-index="' + columnIndex + '" draggable="' + Boolean(column.length) + '" ' +
+          'type="button" data-kind="column" data-index="' + columnIndex + '" draggable="' + canDrag + '" ' +
           'aria-label="' + escapeHtml(columnDescription(column, columnIndex)) + '" title="' + escapeHtml(title) + '">' +
           '<span class="column-meta"><span>列 ' + (columnIndex + 1) + '</span><span class="column-count">' +
           column.length + "/" + settings.capacity + '</span></span>' +
@@ -292,11 +791,11 @@
         if (patternId) {
           const pattern = getPattern(patternId);
           return (
-            '<button class="reserve-slot is-filled' + (isSelected ? " is-selected" : "") + '" ' +
-              (validTarget ? " is-target is-valid-target" : "") + 'type="button" data-kind="reserve" data-index="' + reserveIndex + '" draggable="true" ' +
+            '<button class="reserve-slot is-filled' + (isSelected ? " is-selected" : "") +
+              (validTarget ? " is-target is-valid-target" : "") + '" type="button" data-kind="reserve" data-index="' + reserveIndex + '" draggable="true" ' +
               'aria-label="暂存位 ' + (reserveIndex + 1) + "，" + escapeHtml(pattern.name) + '，点选后放回棋盘" title="点选后放回棋盘">' +
-              '<span class="tile reserve-glyph" style="--pattern-color:' + escapeHtml(pattern.color) + '" aria-hidden="true">' +
-                escapeHtml(pattern.glyph) + "</span></button>"
+              '<span class="tile reserve-glyph' + (pattern.image ? " has-art" : "") + '" style="--pattern-color:' + escapeHtml(pattern.color) + '" aria-hidden="true">' +
+                patternVisualHtml(pattern) + "</span></button>"
           );
         }
         return (
@@ -306,17 +805,21 @@
         );
       }).join("");
     } else {
-      ui.reserveSection.hidden = false;
-      ui.reserveSlots.innerHTML = '<span class="reserve-empty-copy">当前难度没有暂存位</span>';
+      ui.reserveSection.hidden = true;
+      ui.reserveSlots.innerHTML = "";
     }
 
     ui.moveCount.textContent = String(moveCount);
     ui.sortedCount.textContent = completedCount + " / " + totalPatterns;
     ui.capacityLabel.textContent = String(settings.capacity);
     ui.difficultyBadge.textContent = settings.difficulty === "custom" ? "自定义" : PRESETS[settings.difficulty].label;
-    ui.boardCaption.textContent = "每列最多 " + settings.capacity + " 个图案 · 顶部同图或空列才能放入";
+    ui.boardCaption.textContent = "每列最多 " + settings.capacity + " 格 · " + settings.shuffleSteps + " 步打乱" + (settings.fixedCount ? " · 白格固定，点选猜图案" : "");
     ui.cancelSelectionButton.hidden = !selected || isAnimating;
-    ui.victoryBanner.hidden = !isVictory();
+    ui.victoryBanner.hidden = isAnimating || !isVictory();
+    ui.undoButton.disabled = isAnimating || moveHistory.length === 0;
+    ui.saveButton.disabled = isAnimating;
+    ui.soundToggle.setAttribute("aria-pressed", String(soundEnabled));
+    updateSaveButton();
     ui.columns.style.setProperty("--column-count", board.columns.length);
   }
 
@@ -327,7 +830,7 @@
 
   function selectSource(kind, index) {
     if (isAnimating || isVictory()) return;
-    if (kind === "column" && (!board.columns[index] || !board.columns[index].length)) {
+    if (kind === "column" && (!board.columns[index] || !topGroupSize(board.columns[index]))) {
       announce("先点选一列顶部有图案的列。");
       return;
     }
@@ -337,8 +840,8 @@
     }
     selected = { kind: kind, index: index };
     const description = kind === "column"
-      ? "已选第 " + (index + 1) + " 列。点另一列移动顶部整组，或点空暂存位收起一个图案。"
-      : "已选暂存位。点空列或相同图案列，把图案放回去。";
+      ? "已选第 " + (index + 1) + " 列。点目标列后，会按空位自动移动顶部图案。"
+      : "已选暂存位。点任一有空间的列，把图案放回去。";
     announce(description);
     render();
   }
@@ -364,17 +867,13 @@
         const target = board.columns[targetIndex];
         if (selected.kind === "column" && selected.index === targetIndex) return;
         if (selected.kind === "column") {
-          const sourceColumn = board.columns[selected.index];
-          const count = topGroupSize(sourceColumn);
-          if (target.length + count > settings.capacity) {
-            announce("这一整组放不下。可以先把挡住的图案放进暂存位。");
-          } else {
-            announce("只能把图案放到顶部相同的列，或空列。");
-          }
+          announce(target.length >= settings.capacity
+            ? "这一列已经满了，先找其他位置吧。"
+            : "当前没有可移动的顶部图案。");
         } else if (target.length + 1 > settings.capacity) {
           announce("这一列已经满了，先找其他位置吧。");
         } else {
-          announce("只能把图案放到顶部相同的列，或空列。");
+          announce("目标列空间不足，放不下这个图案。");
         }
       } else {
         announce("请先从列或有图案的暂存位开始选择。");
@@ -389,7 +888,7 @@
     if (!targetIsValid(source, target.kind, target.index)) return null;
     if (source.kind === "column" && target.kind === "column") {
       const sourceColumn = board.columns[source.index];
-      const count = topGroupSize(sourceColumn);
+      const count = Math.min(topGroupSize(sourceColumn), settings.capacity - board.columns[target.index].length);
       return {
         source: source,
         target: target,
@@ -417,18 +916,6 @@
       };
     }
     return null;
-  }
-
-  function unionRect(elements) {
-    const rects = elements.map(function (element) { return element.getBoundingClientRect(); });
-    return rects.reduce(function (result, rect) {
-      return {
-        left: Math.min(result.left, rect.left),
-        top: Math.min(result.top, rect.top),
-        right: Math.max(result.right, rect.right),
-        bottom: Math.max(result.bottom, rect.bottom)
-      };
-    }, { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity });
   }
 
   function elementsForColumnLevels(columnIndex, startLevel, count) {
@@ -460,64 +947,114 @@
     return elementsForColumnLevels(move.target.index, column.length, move.count);
   }
 
-  function createFlightGroup(move, sourceRect, cellWidth, cellHeight) {
-    const flight = document.createElement("div");
-    flight.className = "flight-group";
-    flight.style.left = sourceRect.left + "px";
-    flight.style.top = sourceRect.top + "px";
-    flight.style.width = cellWidth + "px";
-    flight.style.height = sourceRect.bottom - sourceRect.top + "px";
-
-    const visualPatternIds = move.patternIds.slice().reverse();
-    visualPatternIds.forEach(function (patternId) {
-      const pattern = getPattern(patternId);
-      const tile = document.createElement("span");
-      tile.className = "flight-tile tile";
-      tile.style.width = cellWidth + "px";
-      tile.style.height = cellHeight + "px";
-      tile.style.flexBasis = cellHeight + "px";
-      tile.style.setProperty("--pattern-color", pattern.color);
-      tile.textContent = pattern.glyph;
-      flight.appendChild(tile);
-    });
-    ui.flightLayer.appendChild(flight);
-    return flight;
+  function createFlightTile(patternId, sourceRect) {
+    const pattern = getPattern(patternId);
+    const tile = document.createElement("span");
+    tile.className = "flight-tile tile" + (isMysteryToken(patternId) ? " mystery-hidden" : "") +
+      (!isMysteryToken(patternId) && pattern.image ? " has-art" : "");
+    tile.style.left = sourceRect.left + "px";
+    tile.style.top = sourceRect.top + "px";
+    tile.style.width = sourceRect.width + "px";
+    tile.style.height = sourceRect.height + "px";
+    if (!isMysteryToken(patternId)) tile.style.setProperty("--pattern-color", pattern.color);
+    tile.innerHTML = isMysteryToken(patternId) ? "?" : patternVisualHtml(pattern);
+    ui.flightLayer.appendChild(tile);
+    return tile;
   }
 
   async function animateMove(move) {
     const fromElements = sourceElements(move).filter(Boolean);
     const toElements = destinationElements(move).filter(Boolean);
     if (!fromElements.length || !toElements.length) return;
-
-    const fromRect = unionRect(fromElements);
-    const toRect = unionRect(toElements);
-    const cellRect = fromElements[0].getBoundingClientRect();
-    const flight = createFlightGroup(move, fromRect, cellRect.width, cellRect.height);
-    fromElements.forEach(function (element) { element.classList.add("is-flying"); });
-
-    const deltaX = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2);
-    const deltaY = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const duration = reducedMotion ? 90 : Math.max(320, 260 + move.count * 45);
-
-    if (typeof flight.animate === "function") {
-      const animation = flight.animate([
-        { transform: "translate(0px, 0px) scale(1)", offset: 0 },
-        { transform: "translate(0px, -16px) scale(1.04)", offset: 0.19 },
-        { transform: "translate(" + deltaX + "px, " + (deltaY - 11) + "px) scale(1.035)", offset: 0.76 },
-        { transform: "translate(" + deltaX + "px, " + deltaY + "px) scale(1)", offset: 1 }
-      ], { duration: duration, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards" });
-      try {
-        await animation.finished;
-      } catch (error) {
-        // The move still completes if the browser cancels its visual animation.
+    const duration = reducedMotion ? 80 : 190;
+    const stagger = reducedMotion ? 90 : 205;
+    const animations = [];
+    for (let step = 0; step < fromElements.length; step += 1) {
+      const index = fromElements.length - 1 - step;
+      const source = fromElements[index];
+      const destination = toElements[Math.min(index, toElements.length - 1)];
+      const sourceRect = source.getBoundingClientRect();
+      const targetRect = destination.getBoundingClientRect();
+      const flight = createFlightTile(move.patternIds[index], sourceRect);
+      source.classList.add("is-flying");
+      const deltaX = (targetRect.left + targetRect.width / 2) - (sourceRect.left + sourceRect.width / 2);
+      const deltaY = (targetRect.top + targetRect.height / 2) - (sourceRect.top + sourceRect.height / 2);
+      if (typeof flight.animate === "function") {
+        const animation = flight.animate([
+          { transform: "translate(0px, 0px) scale(1)", offset: 0 },
+          { transform: "translate(0px, -14px) scale(1.06)", offset: 0.2 },
+          { transform: "translate(" + deltaX + "px, " + (deltaY - 9) + "px) scale(1.04)", offset: 0.78 },
+          { transform: "translate(" + deltaX + "px, " + deltaY + "px) scale(1)", offset: 1 }
+        ], { duration: duration, delay: step * stagger, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards" });
+        animations.push(animation.finished.catch(function () {}));
+      } else {
+        animations.push(new Promise(function (resolve) { window.setTimeout(resolve, duration + step * stagger); }));
       }
-    } else {
-      await new Promise(function (resolve) { window.setTimeout(resolve, duration); });
     }
-
-    flight.remove();
+    await Promise.all(animations);
+    ui.flightLayer.innerHTML = "";
     fromElements.forEach(function (element) { element.classList.remove("is-flying"); });
+  }
+
+  async function animateGroupMove(move) {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const duration = reducedMotion ? 80 : 190;
+    const sourceIndex = move.source.index;
+    const targetIndex = move.target.index;
+
+    for (let step = 0; step < move.count; step += 1) {
+      const sourceColumn = board.columns[sourceIndex];
+      const targetColumn = board.columns[targetIndex];
+      const sourceCell = ui.columns.querySelector(
+        '[data-kind="column"][data-index="' + sourceIndex + '"] .stack-cell[data-level="' + (sourceColumn.length - 1) + '"]'
+      );
+      const sourceRect = sourceCell ? sourceCell.getBoundingClientRect() : null;
+      const token = sourceColumn.pop();
+      playSound("tile", step);
+      targetColumn.push(actualPatternId(token));
+      const revealedLevel = sourceColumn.length - 1;
+      const revealedMystery = revealedLevel >= 0 && isMysteryToken(sourceColumn[revealedLevel]);
+      revealTopToken(sourceColumn);
+      render();
+
+      const revealedCell = revealedMystery ? ui.columns.querySelector(
+        '[data-kind="column"][data-index="' + sourceIndex + '"] .stack-cell[data-level="' + revealedLevel + '"]'
+      ) : null;
+      const revealAnimation = revealedCell && typeof revealedCell.animate === "function"
+        ? revealedCell.animate([
+          { transform: "perspective(360px) rotateY(88deg) scale(.86)", opacity: .72 },
+          { transform: "perspective(360px) rotateY(0) scale(1)", opacity: 1 }
+        ], { duration: reducedMotion ? 70 : 210, easing: "cubic-bezier(.2,.75,.25,1)", fill: "both" })
+        : null;
+
+      const targetCell = ui.columns.querySelector(
+        '[data-kind="column"][data-index="' + targetIndex + '"] .stack-cell[data-level="' + (targetColumn.length - 1) + '"]'
+      );
+      const targetRect = targetCell ? targetCell.getBoundingClientRect() : null;
+      if (!sourceRect || !targetRect) continue;
+
+      const flight = createFlightTile(token, sourceRect);
+      targetCell.classList.add("is-flying");
+      const deltaX = (targetRect.left + targetRect.width / 2) - (sourceRect.left + sourceRect.width / 2);
+      const deltaY = (targetRect.top + targetRect.height / 2) - (sourceRect.top + sourceRect.height / 2);
+      const pendingAnimations = [];
+      if (revealAnimation) pendingAnimations.push(revealAnimation.finished.catch(function () {}));
+      if (typeof flight.animate === "function") {
+        const animation = flight.animate([
+          { transform: "translate(0px, 0px) scale(1)", offset: 0 },
+          { transform: "translate(0px, -14px) scale(1.06)", offset: 0.2 },
+          { transform: "translate(" + deltaX + "px, " + (deltaY - 9) + "px) scale(1.04)", offset: 0.78 },
+          { transform: "translate(" + deltaX + "px, " + deltaY + "px) scale(1)", offset: 1 }
+        ], { duration: duration, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards" });
+        pendingAnimations.push(animation.finished.catch(function () {}));
+      } else {
+        pendingAnimations.push(new Promise(function (resolve) { window.setTimeout(resolve, duration); }));
+      }
+      await Promise.all(pendingAnimations);
+      flight.remove();
+      targetCell.classList.remove("is-flying");
+    }
   }
 
   async function performMove(move) {
@@ -528,23 +1065,28 @@
     ui.settingsButton.disabled = true;
     ui.newGameButton.disabled = true;
     ui.restartButton.disabled = true;
+    ui.shuffleButton.disabled = true;
+    ui.undoButton.disabled = true;
+    ui.saveButton.disabled = true;
     ui.columns.querySelectorAll(".column").forEach(function (element) { element.setAttribute("aria-disabled", "true"); });
     ui.reserveSlots.querySelectorAll(".reserve-slot").forEach(function (element) { element.setAttribute("aria-disabled", "true"); });
 
-    await animateMove(move);
+    moveHistory.push({ board: cloneBoard(board), moveCount: moveCount });
+    if (move.type !== "column-group") playSound(move.type === "to-reserve" || move.type === "from-reserve" ? "stash" : "move");
+    if (move.type === "column-group") await animateGroupMove(move);
+    else await animateMove(move);
 
     if (move.type === "column-group") {
-      const source = board.columns[move.source.index];
-      source.splice(source.length - move.count, move.count);
-      board.columns[move.target.index].push.apply(board.columns[move.target.index], move.patternIds);
-      announce("整组移动完成。");
+      announce("已从列顶依次移动 " + move.count + " 个图案。");
     } else if (move.type === "to-reserve") {
       board.columns[move.source.index].pop();
-      board.reserve[move.target.index] = move.patternIds[0];
+      board.reserve[move.target.index] = actualPatternId(move.patternIds[0]);
+      revealTopToken(board.columns[move.source.index]);
       announce("已暂存一个图案。");
     } else {
       board.reserve[move.source.index] = null;
       board.columns[move.target.index].push(move.patternIds[0]);
+      revealTopToken(board.columns[move.target.index]);
       announce("图案已放回列中。");
     }
 
@@ -555,29 +1097,114 @@
     ui.settingsButton.disabled = false;
     ui.newGameButton.disabled = false;
     ui.restartButton.disabled = false;
+    ui.shuffleButton.disabled = false;
     render();
-    if (isVictory()) announce("整理完成！所有图案都回到了自己的列里。");
+    persistLocalData(true);
+    if (isVictory()) {
+      announce("整理完成！所有图案都回到了自己的列里。");
+      showVictoryCelebration();
+    } else if (victoryCelebrated) {
+      victoryCelebrated = false;
+      clearCelebration();
+    }
   }
 
-  function setNewGame() {
+  function setNewGame(message) {
     if (isAnimating) return;
+    if (typeof message !== "string") message = "";
     selected = null;
     moveCount = 0;
+    moveHistory = [];
     board = buildSolvableBoard(settings);
     initialBoard = cloneBoard(board);
-    ui.victoryBanner.hidden = true;
+    victoryCelebrated = false;
+    clearCelebration();
     render();
-    announce("新的一局开始啦。点一列，再点目标列；顶部相同的图案会整组移动。");
+    persistLocalData(true);
+    announce(message || "新的一局开始啦。点一列，再点目标列；顶部连续相同的图案会逐个飞过去。");
   }
 
   function restartGame() {
     if (!initialBoard || isAnimating) return;
     selected = null;
     moveCount = 0;
+    moveHistory = [];
     board = cloneBoard(initialBoard);
-    ui.victoryBanner.hidden = true;
+    victoryCelebrated = false;
+    clearCelebration();
     render();
+    persistLocalData(true);
     announce("已重新开始这局。");
+  }
+
+  function undoMove() {
+    if (isAnimating || !moveHistory.length) return;
+    const previous = moveHistory.pop();
+    board = cloneBoard(previous.board);
+    moveCount = previous.moveCount;
+    selected = null;
+    if (!isVictory()) {
+      victoryCelebrated = false;
+      clearCelebration();
+    }
+    render();
+    persistLocalData(true);
+    announce("已后退一步。");
+  }
+
+  function openFixedGuess(columnIndex) {
+    if (isAnimating || isVictory()) return;
+    const column = board.columns[columnIndex];
+    const fixedIndex = column.findIndex(isUnknownFixedToken);
+    if (fixedIndex < 0) {
+      announce("这个白格已经揭晓，仍然不能移动。");
+      return;
+    }
+    guessingColumnIndex = columnIndex;
+    ui.guessFeedback.textContent = "点选你认为正确的图案。";
+    ui.guessChoices.innerHTML = "";
+    getTheme().patterns.slice(0, settings.patternCount).forEach(function (pattern) {
+      const button = document.createElement("button");
+      button.className = "guess-choice" + (pattern.image ? " has-art" : "");
+      button.type = "button";
+      button.dataset.patternId = pattern.id;
+      button.style.setProperty("--pattern-color", pattern.color);
+      button.setAttribute("aria-label", pattern.name);
+      button.innerHTML = '<span class="guess-choice-art" aria-hidden="true">' + patternVisualHtml(pattern) + '</span><small>' + escapeHtml(pattern.name) + '</small>';
+      ui.guessChoices.appendChild(button);
+    });
+    if (typeof ui.guessDialog.showModal === "function") ui.guessDialog.showModal();
+    else ui.guessDialog.setAttribute("open", "");
+  }
+
+  function submitFixedGuess(patternId) {
+    if (guessingColumnIndex === null || isAnimating) return;
+    const column = board.columns[guessingColumnIndex];
+    const fixedIndex = column.findIndex(isUnknownFixedToken);
+    if (fixedIndex < 0) return;
+    const answer = actualPatternId(column[fixedIndex]);
+    if (patternId !== answer) {
+      ui.guessFeedback.textContent = "还没猜中，再试一次。";
+      playSound("wrong");
+      return;
+    }
+    moveHistory.push({ board: cloneBoard(board), moveCount: moveCount });
+    column[fixedIndex] = "#" + answer;
+    closeGuessDialog();
+    render();
+    persistLocalData(true);
+    playSound("reveal");
+    announce("猜对了！固定格揭晓为" + getPattern(answer).name + "，它仍然不能移动。");
+    if (isVictory()) {
+      announce("整理完成！所有图案都回到了自己的列里。");
+      showVictoryCelebration();
+    }
+  }
+
+  function closeGuessDialog() {
+    guessingColumnIndex = null;
+    if (typeof ui.guessDialog.close === "function") ui.guessDialog.close();
+    else ui.guessDialog.removeAttribute("open");
   }
 
   function applyTheme(themeId) {
@@ -588,6 +1215,7 @@
     if (!THEMES[themeId]) return;
     currentThemeId = themeId;
     render();
+    persistLocalData(true);
     announce("已切换到" + getTheme().name + "，棋盘进度保留。");
   }
 
@@ -597,6 +1225,8 @@
     ui.capacityInput.value = value.capacity;
     ui.reserveCountInput.value = value.reserveCount;
     ui.shuffleStepsInput.value = value.shuffleSteps;
+    ui.mysteryCountInput.value = value.mysteryCount;
+    ui.fixedCountInput.value = value.fixedCount;
     updateCustomControls();
   }
 
@@ -607,21 +1237,35 @@
       patternCount: preset.patternCount,
       capacity: preset.capacity,
       reserveCount: preset.reserveCount,
-      shuffleSteps: preset.shuffleSteps
+      shuffleSteps: preset.shuffleSteps,
+      mysteryCount: preset.mysteryCount,
+      fixedCount: preset.fixedCount
     };
   }
 
   function updateCustomControls() {
     const isCustom = ui.difficultySelect.value === "custom";
+    const capacity = Number.parseInt(ui.capacityInput.value, 10) || settings.capacity;
+    const maxFixedCount = Math.min(3, capacity - 1);
+    ui.fixedCountInput.max = String(maxFixedCount);
+    if (Number.parseInt(ui.fixedCountInput.value, 10) > maxFixedCount) {
+      ui.fixedCountInput.value = String(maxFixedCount);
+    }
     [
       ui.patternCountInput,
       ui.capacityInput,
       ui.reserveCountInput,
-      ui.shuffleStepsInput
+      ui.shuffleStepsInput,
+      ui.mysteryCountInput,
+      ui.fixedCountInput
     ].forEach(function (input) { input.disabled = !isCustom; });
-    ui.difficultyHint.textContent = isCustom
-      ? "自定义图案种类、列容量、暂存位和打乱强度。"
-      : "预设难度会调整图案种类、暂存位和开局打乱强度。";
+    if (isCustom) {
+      ui.difficultyHint.textContent = "自定义图案种类、列容量、暂存位、问号和打乱强度；多个固定白格会集中在同一列。";
+    } else {
+      const preset = PRESETS[ui.difficultySelect.value];
+      const fixedHint = preset.fixedCount ? "；固定白格集中在同一列" : "";
+      ui.difficultyHint.textContent = preset.label + "：" + preset.shuffleSteps + " 步打乱 · " + preset.reserveCount + " 个暂存位" + fixedHint + "。";
+    }
   }
 
   function clampInteger(input, min, max, fallback) {
@@ -633,12 +1277,15 @@
   function readSettingsForm() {
     const difficulty = ui.difficultySelect.value;
     if (difficulty !== "custom") return selectedPresetSettings(difficulty);
+    const capacity = clampInteger(ui.capacityInput, 2, 12, settings.capacity);
     return {
       difficulty: "custom",
-      patternCount: clampInteger(ui.patternCountInput, 2, 6, settings.patternCount),
-      capacity: clampInteger(ui.capacityInput, 2, 6, settings.capacity),
+      patternCount: clampInteger(ui.patternCountInput, 2, 7, settings.patternCount),
+      capacity: capacity,
       reserveCount: clampInteger(ui.reserveCountInput, 0, 8, settings.reserveCount),
-      shuffleSteps: clampInteger(ui.shuffleStepsInput, 10, 120, settings.shuffleSteps)
+      shuffleSteps: clampInteger(ui.shuffleStepsInput, 10, 600, settings.shuffleSteps),
+      mysteryCount: clampInteger(ui.mysteryCountInput, 0, 24, settings.mysteryCount),
+      fixedCount: clampInteger(ui.fixedCountInput, 0, Math.min(3, capacity - 1), settings.fixedCount)
     };
   }
 
@@ -656,6 +1303,11 @@
 
   function handleColumnClick(event) {
     if (Date.now() < suppressClickUntil) return;
+    const fixedCell = event.target.closest("[data-fixed-column]");
+    if (fixedCell && ui.columns.contains(fixedCell)) {
+      openFixedGuess(Number(fixedCell.dataset.fixedColumn));
+      return;
+    }
     const columnButton = event.target.closest('[data-kind="column"]');
     if (!columnButton || !ui.columns.contains(columnButton)) return;
     handleTarget("column", Number(columnButton.dataset.index));
@@ -675,7 +1327,7 @@
     }
     const kind = element.dataset.kind;
     const index = Number(element.dataset.index);
-    if (kind === "column" && !board.columns[index].length) {
+    if (kind === "column" && !topGroupSize(board.columns[index])) {
       event.preventDefault();
       return;
     }
@@ -686,7 +1338,7 @@
     selected = { kind: kind, index: index };
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", kind + ":" + index);
-    announce(kind === "column" ? "拖动整组图案到目标列，或拖到暂存位收起一个。" : "拖动暂存图案到可以放入的列。");
+    announce(kind === "column" ? "拖动顶部图案组到目标列，或拖到暂存位收起一个。" : "拖动暂存图案到可以放入的列。");
   }
 
   function handleDrop(event, targetKind, targetIndex) {
@@ -701,6 +1353,16 @@
   }
 
   ui.themeSelect.addEventListener("change", function (event) { applyTheme(event.target.value); });
+  ui.soundToggle.addEventListener("click", function () {
+    soundEnabled = !soundEnabled;
+    updateSaveButton();
+    persistLocalData(false);
+    if (soundEnabled) playSound("move");
+  });
+  ui.saveButton.addEventListener("click", openSaveDialog);
+  ui.closeSaveButton.addEventListener("click", closeSaveDialog);
+  ui.closeSaveFooterButton.addEventListener("click", closeSaveDialog);
+  ui.saveSlotsList.addEventListener("click", handleSaveSlotAction);
   ui.settingsButton.addEventListener("click", openSettings);
   ui.closeSettingsButton.addEventListener("click", closeSettings);
   ui.cancelSettingsButton.addEventListener("click", closeSettings);
@@ -717,9 +1379,19 @@
       updateCustomControls();
     }
   });
+  ui.capacityInput.addEventListener("input", updateCustomControls);
   ui.columns.addEventListener("click", handleColumnClick);
+  ui.guessChoices.addEventListener("click", function (event) {
+    const choice = event.target.closest("[data-pattern-id]");
+    if (choice && ui.guessChoices.contains(choice)) submitFixedGuess(choice.dataset.patternId);
+  });
+  ui.closeGuessButton.addEventListener("click", closeGuessDialog);
   ui.reserveSlots.addEventListener("click", handleReserveClick);
   ui.columns.addEventListener("dragstart", function (event) {
+    if (event.target.closest("[data-fixed-column]")) {
+      event.preventDefault();
+      return;
+    }
     const element = event.target.closest('[data-kind="column"]');
     if (element) setDragSource(event, element);
   });
@@ -742,10 +1414,14 @@
     announce("已取消选择。");
   });
   ui.restartButton.addEventListener("click", restartGame);
+  ui.shuffleButton.addEventListener("click", function () {
+    setNewGame("棋盘已重新打乱，新的挑战开始啦。");
+  });
+  ui.undoButton.addEventListener("click", undoMove);
   ui.newGameButton.addEventListener("click", setNewGame);
   ui.victoryNewGameButton.addEventListener("click", setNewGame);
   document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && selected && !isAnimating && !ui.settingsDialog.open) {
+    if (event.key === "Escape" && selected && !isAnimating && !ui.settingsDialog.open && !ui.guessDialog.open) {
       clearSelection();
       announce("已取消选择。");
     }
@@ -753,6 +1429,23 @@
   ui.settingsDialog.addEventListener("click", function (event) {
     if (event.target === ui.settingsDialog) closeSettings();
   });
+  ui.guessDialog.addEventListener("click", function (event) {
+    if (event.target === ui.guessDialog) closeGuessDialog();
+  });
+  ui.saveDialog.addEventListener("click", function (event) {
+    if (event.target === ui.saveDialog) closeSaveDialog();
+  });
 
-  setNewGame();
+  if (loadLocalData()) {
+    setFormValues(settings);
+    render();
+    announce("欢迎回来，已从存档 " + (activeSaveId + 1) + " 继续上次的进度。");
+  } else {
+    setFormValues(settings);
+    setNewGame("欢迎来到海宝跳跳。困难挑战已经准备好了。");
+  }
+  updateSaveButton();
+  window.addEventListener("pagehide", function () {
+    if (!isAnimating) persistLocalData(true);
+  });
 })();

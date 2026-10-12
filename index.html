@@ -2,9 +2,11 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#f3f7f5">
+    <meta name="description" content="海宝跳跳是一款轻松又烧脑的海洋图案归列小游戏。">
     <title>海宝跳跳 · 图案归列</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='20' fill='%23127b77'/%3E%3Ctext x='32' y='46' text-anchor='middle' font-size='43'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="styles.css">
     <script src="game.js" defer></script>
   </head>
@@ -28,12 +30,19 @@
             <select id="themeSelect" aria-label="图案主题">
               <option value="ocean">海洋主题</option>
               <option value="fruit">水果主题</option>
+              <option value="pokemon">宝可梦</option>
+              <option value="pokemon-2">宝可梦徽章</option>
+              <option value="digimon">数码宝贝</option>
             </select>
             <span class="select-chevron" aria-hidden="true">⌄</span>
           </label>
-          <button class="icon-button settings-button" id="settingsButton" type="button" aria-haspopup="dialog">
+          <button class="icon-button settings-button" id="settingsButton" type="button" aria-label="游戏设置" aria-haspopup="dialog">
             <span aria-hidden="true">⚙</span>
             <span>设置</span>
+          </button>
+          <button class="icon-button sound-button" id="soundToggle" type="button" aria-pressed="true" title="关闭音效">
+            <span aria-hidden="true">♫</span>
+            <span id="soundLabel">音效</span>
           </button>
         </div>
       </header>
@@ -48,7 +57,7 @@
           <div class="intro-decoration" aria-hidden="true">
             <span class="bubble bubble-a">✦</span>
             <span class="bubble bubble-b">✧</span>
-            <span class="floating-token">🐚</span>
+            <span class="floating-token" id="floatingToken">🐚</span>
           </div>
         </section>
 
@@ -59,7 +68,7 @@
                 <h2>图案归列</h2>
                 <span class="level-badge" id="levelBadge">普通</span>
               </div>
-              <p class="board-caption" id="boardCaption">每列最多 4 个图案 · 顶部同图才能放入</p>
+              <p class="board-caption" id="boardCaption">每列最多 4 格 · 可叠放任意图案</p>
             </div>
             <div class="stats">
               <div class="stat-chip">
@@ -100,12 +109,21 @@
           <div class="game-footer">
             <div class="game-message-wrap">
               <span class="message-mark" aria-hidden="true">✧</span>
-              <p id="gameMessage" role="status" aria-live="polite">点选一列，再点目标列；同图案会整组移动。</p>
+              <p id="gameMessage" role="status" aria-live="polite">点选来源列，再点目标列；系统会按剩余空间移动顶部图案。</p>
               <button id="cancelSelectionButton" class="cancel-selection" type="button" hidden>取消选择</button>
             </div>
             <div class="game-actions">
               <button id="restartButton" class="secondary-button" type="button">
                 <span aria-hidden="true">↺</span> 重新开始
+              </button>
+              <button id="shuffleButton" class="secondary-button" type="button">
+                <span aria-hidden="true">⤨</span> 打乱
+              </button>
+              <button id="undoButton" class="secondary-button" type="button" disabled>
+                <span aria-hidden="true">↶</span> 后退
+              </button>
+              <button id="saveButton" class="secondary-button save-button" type="button" aria-haspopup="dialog">
+                <span aria-hidden="true">▣</span> <span id="saveButtonLabel">存档 1</span>
               </button>
               <button id="newGameButton" class="primary-button" type="button">
                 <span aria-hidden="true">✦</span> 新的一局
@@ -126,7 +144,7 @@
             <div><strong>怎么玩</strong><small>三步开始整理</small></div>
           </div>
           <div class="how-step"><span>01</span><p>点选有图案的列，或直接拖动。</p></div>
-          <div class="how-step"><span>02</span><p>同图案可以整组移动到一起。</p></div>
+          <div class="how-step"><span>02</span><p>顶部相同图案会按目标列空位逐个移动，也可叠到不同图案上。</p></div>
           <div class="how-step"><span>03</span><p>需要腾位置时，暂存单个图案。</p></div>
         </section>
 
@@ -151,20 +169,20 @@
         <select class="form-select" id="difficultySelect">
           <option value="easy">简单 · 慢慢熟悉</option>
           <option value="normal">普通 · 刚刚好</option>
-          <option value="hard">困难 · 多想一步</option>
+          <option value="hard" selected>困难 · 多想一步</option>
           <option value="custom">自定义</option>
         </select>
 
-        <p class="settings-hint" id="difficultyHint">难度会调整图案种类、暂存位和开局打乱强度。</p>
+        <p class="settings-hint" id="difficultyHint">困难模式会使用更多合法打乱步数，增加还原挑战。</p>
 
         <div class="settings-grid">
           <label class="setting-field" for="patternCountInput">
             <span>图案种类</span>
-            <span class="field-control"><input id="patternCountInput" type="number" min="2" max="6" step="1"><small>种</small></span>
+            <span class="field-control"><input id="patternCountInput" type="number" min="2" max="7" step="1"><small>种</small></span>
           </label>
           <label class="setting-field" for="capacityInput">
             <span>每列容量</span>
-            <span class="field-control"><input id="capacityInput" type="number" min="2" max="6" step="1"><small>个</small></span>
+            <span class="field-control"><input id="capacityInput" type="number" min="2" max="12" step="1"><small>个</small></span>
           </label>
           <label class="setting-field" for="reserveCountInput">
             <span>暂存位</span>
@@ -172,7 +190,15 @@
           </label>
           <label class="setting-field" for="shuffleStepsInput">
             <span>打乱强度</span>
-            <span class="field-control"><input id="shuffleStepsInput" type="number" min="10" max="120" step="5"><small>步</small></span>
+            <span class="field-control"><input id="shuffleStepsInput" type="number" min="10" max="600" step="10"><small>步</small></span>
+          </label>
+          <label class="setting-field" for="mysteryCountInput">
+            <span>隐藏问号</span>
+            <span class="field-control"><input id="mysteryCountInput" type="number" min="0" max="24" step="1"><small>个</small></span>
+          </label>
+          <label class="setting-field" for="fixedCountInput">
+            <span>固定白格</span>
+            <span class="field-control"><input id="fixedCountInput" type="number" min="0" max="3" step="1"><small>个</small></span>
           </label>
         </div>
 
@@ -187,6 +213,39 @@
       </div>
     </dialog>
 
+    <dialog class="settings-dialog guess-dialog" id="guessDialog" aria-labelledby="guessTitle">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-dot"></span> 固定格不能移动</p>
+          <h2 id="guessTitle">猜猜白格是什么？</h2>
+        </div>
+        <button class="close-button" id="closeGuessButton" type="button" aria-label="关闭猜图案">×</button>
+      </div>
+      <div class="guess-content">
+        <p id="guessFeedback" class="guess-feedback">点选你认为正确的图案。</p>
+        <div class="guess-choices" id="guessChoices" role="group" aria-label="选择猜测的图案"></div>
+      </div>
+    </dialog>
+
+    <dialog class="settings-dialog save-dialog" id="saveDialog" aria-labelledby="saveTitle">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-dot"></span> 自动记住进度</p>
+          <h2 id="saveTitle">选择存档</h2>
+        </div>
+        <button class="close-button" id="closeSaveButton" type="button" aria-label="关闭存档">×</button>
+      </div>
+      <div class="save-dialog-content">
+        <p class="save-dialog-note">进度与设置保存在这台设备的浏览器中。每步操作都会自动保存。</p>
+        <div class="save-slots-list" id="saveSlotsList" role="list"></div>
+      </div>
+      <div class="dialog-actions save-dialog-actions">
+        <span id="saveStorageStatus">本机自动保存已开启</span>
+        <button id="closeSaveFooterButton" class="secondary-button" type="button">完成</button>
+      </div>
+    </dialog>
+
     <div class="flight-layer" id="flightLayer" aria-hidden="true"></div>
+    <div class="celebration-layer" id="celebrationLayer" aria-hidden="true"></div>
   </body>
 </html>
