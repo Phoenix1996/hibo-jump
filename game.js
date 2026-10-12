@@ -112,6 +112,10 @@
     closeCampaignFooterButton: document.getElementById("closeCampaignFooterButton"),
     campaignProgress: document.getElementById("campaignProgress"),
     campaignLevelGrid: document.getElementById("campaignLevelGrid"),
+    dailyChallengeButton: document.getElementById("dailyChallengeButton"),
+    dailyChallengeDate: document.getElementById("dailyChallengeDate"),
+    dailyChallengeMeta: document.getElementById("dailyChallengeMeta"),
+    dailyChallengeAction: document.getElementById("dailyChallengeAction"),
     floatingToken: document.getElementById("floatingToken"),
     settingsButton: document.getElementById("settingsButton"),
     difficultyBadge: document.getElementById("levelBadge"),
@@ -144,6 +148,8 @@
     vibrationHint: document.getElementById("vibrationHint"),
     undoButton: document.getElementById("undoButton"),
     shuffleButton: document.getElementById("shuffleButton"),
+    shuffleButtonText: document.getElementById("shuffleButtonText"),
+    newGameButtonText: document.getElementById("newGameButtonText"),
     flightLayer: document.getElementById("flightLayer"),
     celebrationLayer: document.getElementById("celebrationLayer"),
     soundToggle: document.getElementById("soundToggle"),
@@ -161,6 +167,9 @@
   let campaignMode = false;
   let campaignLevel = 1;
   let campaignUnlockedLevel = 1;
+  let dailyMode = false;
+  let dailyChallengeDate = "";
+  let dailyBest = null;
   let currentThemeId = "ocean";
   let board = null;
   let initialBoard = null;
@@ -205,6 +214,43 @@
 
   function isFixedToken(token) {
     return isBlankToken(token) || (typeof token === "string" && token.charAt(0) === "#");
+  }
+
+  function localDateKey() {
+    const date = new Date();
+    return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+  }
+
+  function isValidDateKey(value) {
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(value + "T00:00:00Z");
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }
+
+  function formatDateKey(value) {
+    if (!isValidDateKey(value)) return "今日";
+    const parts = value.split("-");
+    return Number(parts[1]) + "月" + Number(parts[2]) + "日";
+  }
+
+  function dateSeed(value) {
+    let hash = 2166136261;
+    const source = "hibo-jump-daily-v1:" + value;
+    for (let index = 0; index < source.length; index += 1) {
+      hash ^= source.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0) || 1;
+  }
+
+  function createSeededRandom(seed) {
+    let state = seed >>> 0 || 0x9e3779b9;
+    return function () {
+      state ^= state << 13;
+      state ^= state >>> 17;
+      state ^= state << 5;
+      return (state >>> 0) / 4294967296;
+    };
   }
 
   function revealTopToken(column) {
@@ -360,6 +406,9 @@
   function normalizeSnapshot(source) {
     if (!source || typeof source !== "object") return null;
     const snapshotSettings = normalizeSettings(source.settings);
+    const snapshotCampaignMode = source.campaignMode === true;
+    const snapshotDailyDate = isValidDateKey(source.dailyChallengeDate) ? source.dailyChallengeDate : "";
+    const snapshotDailyMode = !snapshotCampaignMode && source.dailyMode === true && Boolean(snapshotDailyDate);
     let snapshotBoard = normalizeBoard(source.board, snapshotSettings);
     const snapshotInitial = normalizeBoard(source.initialBoard, snapshotSettings);
     if (!snapshotBoard) return null;
@@ -367,7 +416,7 @@
     let initialBoard = snapshotInitial || cloneBoard(snapshotBoard);
     let migratedBlankLayout = false;
     if (moveCount === 0 && JSON.stringify(snapshotBoard) === JSON.stringify(initialBoard) && hasLegacyGuessCells(source.board)) {
-      snapshotBoard = buildSolvableBoard(snapshotSettings);
+      snapshotBoard = buildSolvableBoard(snapshotSettings, snapshotDailyMode ? dateSeed(snapshotDailyDate) : undefined);
       initialBoard = cloneBoard(snapshotBoard);
       migratedBlankLayout = true;
     }
@@ -378,8 +427,10 @@
       board: snapshotBoard,
       initialBoard: initialBoard,
       moveCount: moveCount,
-      campaignMode: source.campaignMode === true,
+      campaignMode: snapshotCampaignMode,
       campaignLevel: Math.max(1, Math.min(CAMPAIGN_LEVEL_COUNT, Number.parseInt(source.campaignLevel, 10) || 1)),
+      dailyMode: snapshotDailyMode,
+      dailyChallengeDate: snapshotDailyDate,
       migratedBlankLayout: migratedBlankLayout,
       savedAt: Number(source.savedAt) || Date.now()
     };
@@ -394,6 +445,8 @@
       moveCount: moveCount,
       campaignMode: campaignMode,
       campaignLevel: campaignLevel,
+      dailyMode: dailyMode,
+      dailyChallengeDate: dailyChallengeDate,
       savedAt: Date.now()
     };
   }
@@ -408,6 +461,8 @@
     moveCount = normalized.moveCount;
     campaignMode = normalized.campaignMode;
     campaignLevel = normalized.campaignLevel;
+    dailyMode = normalized.dailyMode;
+    dailyChallengeDate = normalized.dailyChallengeDate;
     selected = null;
     moveHistory = [];
     victoryCelebrated = isVictory();
@@ -423,6 +478,10 @@
     currentThemeId = THEMES[stored.themeId] ? stored.themeId : "ocean";
     soundEnabled = stored.soundEnabled !== false;
     vibrationEnabled = stored.vibrationEnabled !== false;
+    dailyBest = stored.dailyBest && isValidDateKey(stored.dailyBest.date) &&
+      Number.isInteger(stored.dailyBest.moves) && stored.dailyBest.moves > 0
+      ? { date: stored.dailyBest.date, moves: stored.dailyBest.moves }
+      : null;
     activeSaveId = Math.max(0, Math.min(SAVE_SLOT_COUNT - 1, Number.parseInt(stored.activeSaveId, 10) || 0));
     saveSlots = Array.from({ length: SAVE_SLOT_COUNT }, function (_, index) {
       return normalizeSnapshot(Array.isArray(stored.saveSlots) ? stored.saveSlots[index] : null);
@@ -443,6 +502,7 @@
       soundEnabled: soundEnabled,
       vibrationEnabled: vibrationEnabled,
       campaignUnlockedLevel: campaignUnlockedLevel,
+      dailyBest: dailyBest,
       saveSlots: saveSlots.map(function (snapshot) {
         if (!snapshot) return null;
         const storedSnapshot = Object.assign({}, snapshot);
@@ -532,6 +592,17 @@
   }
 
   function renderCampaignLevels() {
+    const today = localDateKey();
+    const dailyActive = dailyMode && dailyChallengeDate === today;
+    const hasDailyBest = dailyBest && dailyBest.date === today;
+    ui.dailyChallengeDate.textContent = formatDateKey(today);
+    ui.dailyChallengeMeta.textContent = hasDailyBest
+      ? "本日最佳 " + dailyBest.moves + " 步 · 今天棋盘固定"
+      : "每天更新 · 同日玩家玩同一盘";
+    ui.dailyChallengeAction.textContent = dailyActive ? "重开今日" : "开始挑战";
+    ui.dailyChallengeButton.setAttribute("aria-label", dailyActive
+      ? "重开 " + formatDateKey(today) + " 的每日挑战"
+      : "开始 " + formatDateKey(today) + " 的每日挑战");
     ui.campaignProgress.textContent = "已解锁 " + campaignUnlockedLevel + " / " + CAMPAIGN_LEVEL_COUNT + " 关";
     ui.campaignLevelGrid.innerHTML = Array.from({ length: CAMPAIGN_LEVEL_COUNT }, function (_, index) {
       const level = index + 1;
@@ -562,6 +633,8 @@
   function startCampaignLevel(level) {
     if (isAnimating) return;
     campaignMode = true;
+    dailyMode = false;
+    dailyChallengeDate = "";
     campaignLevel = Math.max(1, Math.min(campaignUnlockedLevel, CAMPAIGN_LEVEL_COUNT, Number.parseInt(level, 10) || 1));
     settings = campaignSettingsForLevel(campaignLevel);
     selected = null;
@@ -578,6 +651,30 @@
     announce("第 " + campaignLevel + " 关开始。完成后会解锁下一关。");
   }
 
+  function startDailyChallenge(dateKey) {
+    if (isAnimating) return;
+    dailyChallengeDate = isValidDateKey(dateKey) ? dateKey : localDateKey();
+    dailyMode = true;
+    campaignMode = false;
+    settings = selectedPresetSettings("hard");
+    selected = null;
+    moveCount = 0;
+    moveHistory = [];
+    board = buildSolvableBoard(settings, dateSeed(dailyChallengeDate));
+    initialBoard = cloneBoard(board);
+    victoryCelebrated = false;
+    clearCelebration();
+    closeCampaignDialog();
+    setFormValues(settings);
+    render();
+    persistLocalData(true);
+    announce("" + formatDateKey(dailyChallengeDate) + " 的每日挑战开始。同一天的棋盘相同。");
+  }
+
+  function handleDailyChallengeClick() {
+    startDailyChallenge(localDateKey());
+  }
+
   function handleCampaignLevelClick(event) {
     const button = event.target.closest("[data-campaign-level]");
     if (!button || !ui.campaignLevelGrid.contains(button) || button.disabled) return;
@@ -589,6 +686,10 @@
       startCampaignLevel(campaignLevel + 1);
       return;
     }
+    if (dailyMode) {
+      startDailyChallenge(localDateKey());
+      return;
+    }
     setNewGame();
   }
 
@@ -597,7 +698,7 @@
     selected = null;
     moveCount = 0;
     moveHistory = [];
-    board = buildSolvableBoard(settings);
+    board = buildSolvableBoard(settings, dailyMode ? dateSeed(dailyChallengeDate) : undefined);
     initialBoard = cloneBoard(board);
     victoryCelebrated = false;
     clearCelebration();
@@ -649,7 +750,7 @@
           restoreSnapshot(saveSlots[nextIndex]);
         } else {
           activeSaveId = (index + 1) % SAVE_SLOT_COUNT;
-          board = buildSolvableBoard(settings);
+          board = buildSolvableBoard(settings, dailyMode ? dateSeed(dailyChallengeDate) : undefined);
           initialBoard = cloneBoard(board);
           moveCount = 0;
           moveHistory = [];
@@ -756,8 +857,8 @@
     }
   }
 
-  function randomIndex(max) {
-    return Math.floor(Math.random() * max);
+  function randomIndex(max, randomSource) {
+    return Math.floor((randomSource || Math.random)() * max);
   }
 
   function topGroupSize(column) {
@@ -816,7 +917,9 @@
     return score - largestRun * 5 - longRunPenalty * 2 - solvedColumns * 60;
   }
 
-  function buildSolvableBoard(currentSettings) {
+  function buildSolvableBoard(currentSettings, seed) {
+    const randomSource = Number.isInteger(seed) ? createSeededRandom(seed) : Math.random;
+    const pickIndex = function (max) { return randomIndex(max, randomSource); };
     const fixedCount = Math.min(currentSettings.fixedCount, currentSettings.capacity - 1, currentSettings.patternCount);
     // Compare several solvable reverse walks so hard boards are less likely to leave
     // large same-pattern runs connected just because one shuffle happened to do so.
@@ -829,14 +932,17 @@
       const availablePatterns = [];
       for (let index = 0; index < currentSettings.patternCount; index += 1) availablePatterns.push(index + 1);
       for (let index = availablePatterns.length - 1; index > 0; index -= 1) {
-        const swapIndex = randomIndex(index + 1);
+        const swapIndex = pickIndex(index + 1);
         const value = availablePatterns[index];
         availablePatterns[index] = availablePatterns[swapIndex];
         availablePatterns[swapIndex] = value;
       }
-      // Fixed blanks represent missing tiles. Randomly group them into one to N
-      // pattern columns so multiple blanks can share a column on some boards.
-      const blankPatternCount = fixedCount ? randomIndex(fixedCount) + 1 : 0;
+      // Fixed blanks represent missing tiles. Keep them grouped more often than
+      // fully spread so a board can hide several missing tiles in one column.
+      const blankDistributionRoll = pickIndex(100);
+      const blankPatternCount = fixedCount === 0 ? 0 : fixedCount === 1 ? 1 :
+        fixedCount === 2 ? (blankDistributionRoll < 65 ? 1 : 2) :
+          (blankDistributionRoll < 40 ? 1 : blankDistributionRoll < 80 ? 2 : 3);
       const blankCountsByPattern = new Map();
       availablePatterns.slice(0, blankPatternCount).forEach(function (index) {
         blankCountsByPattern.set("p" + index, 1);
@@ -845,7 +951,7 @@
         const eligiblePatterns = Array.from(blankCountsByPattern.keys()).filter(function (patternId) {
           return blankCountsByPattern.get(patternId) < currentSettings.capacity - 1;
         });
-        const patternId = eligiblePatterns[randomIndex(eligiblePatterns.length)];
+        const patternId = eligiblePatterns[pickIndex(eligiblePatterns.length)];
         blankCountsByPattern.set(patternId, blankCountsByPattern.get(patternId) + 1);
       }
       const columns = [];
@@ -892,7 +998,7 @@
         const availableChoices = choices.length ? choices : candidates;
         if (!availableChoices.length) break;
 
-        const chosen = availableChoices[randomIndex(availableChoices.length)];
+        const chosen = availableChoices[pickIndex(availableChoices.length)];
         const donor = columns[chosen.donorIndex];
         const group = donor.splice(donor.length - chosen.count, chosen.count);
         columns[chosen.targetIndex].push.apply(columns[chosen.targetIndex], group);
@@ -941,7 +1047,7 @@
     const mysteryCandidates = [];
     mysteryCandidatesByNeighborMatches.forEach(function (bucket) {
       for (let index = bucket.length - 1; index > 0; index -= 1) {
-        const swapIndex = randomIndex(index + 1);
+        const swapIndex = pickIndex(index + 1);
         const candidate = bucket[index];
         bucket[index] = bucket[swapIndex];
         bucket[swapIndex] = candidate;
@@ -1283,16 +1389,25 @@
     ensureReserveElements();
     ui.moveCount.textContent = String(moveCount);
     ui.capacityLabel.textContent = String(settings.capacity);
-    ui.difficultyBadge.textContent = campaignMode ? "闯关" : (settings.difficulty === "custom" ? "自定义" : PRESETS[settings.difficulty].label);
-    ui.gameTitle.textContent = campaignMode ? "第 " + campaignLevel + " 关" : "图案归列";
+    ui.difficultyBadge.textContent = campaignMode ? "闯关" : dailyMode ? "每日" : (settings.difficulty === "custom" ? "自定义" : PRESETS[settings.difficulty].label);
+    ui.gameTitle.textContent = campaignMode ? "第 " + campaignLevel + " 关" : dailyMode ? "每日挑战" : "图案归列";
     ui.brandSubtitle.textContent = campaignMode
       ? "关卡进度 " + campaignLevel + "/" + CAMPAIGN_LEVEL_COUNT
-      : "自由挑战 · 慢慢通关";
+      : dailyMode
+        ? formatDateKey(dailyChallengeDate) + " · 同日同盘"
+        : "自由挑战 · 慢慢通关";
     ui.campaignButton.setAttribute("aria-label", campaignMode
       ? "关卡闯关，当前第 " + campaignLevel + " 关，已解锁 " + campaignUnlockedLevel + " 关"
-      : "关卡闯关，已解锁 " + campaignUnlockedLevel + " 关");
-    const victoryButtonLabel = campaignMode && campaignLevel < CAMPAIGN_LEVEL_COUNT ? "下一关" : "再玩一局";
+      : "关卡闯关，已解锁 " + campaignUnlockedLevel + " 关" + (dailyMode ? "；每日挑战进行中" : ""));
+    const victoryButtonLabel = campaignMode && campaignLevel < CAMPAIGN_LEVEL_COUNT
+      ? "下一关"
+      : dailyMode ? "再挑战一次" : "再玩一局";
     if (ui.victoryButtonText.textContent !== victoryButtonLabel) ui.victoryButtonText.textContent = victoryButtonLabel;
+    const shuffleLabel = dailyMode ? "换随机局" : "打乱";
+    if (ui.shuffleButtonText.textContent !== shuffleLabel) ui.shuffleButtonText.textContent = shuffleLabel;
+    ui.shuffleButton.setAttribute("aria-label", dailyMode ? "离开每日挑战并开始随机局" : "重新打乱棋盘");
+    const newGameLabel = dailyMode ? "重开今日" : campaignMode ? "重开本关" : "新的一局";
+    if (ui.newGameButtonText.textContent !== newGameLabel) ui.newGameButtonText.textContent = newGameLabel;
     ui.boardCaption.textContent = "每列最多 " + settings.capacity + " 格 · " + settings.shuffleSteps + " 步打乱" + (settings.fixedCount ? " · 白格可能出现在同一列" : "");
     ui.cancelSelectionButton.hidden = !selected || isAnimating;
     ui.victoryBanner.hidden = isAnimating || !isVictory();
@@ -1737,7 +1852,16 @@
     }
     persistLocalData(true);
     if (won) {
-      announce("整理完成！所有图案都回到了自己的列里。");
+      if (dailyMode && dailyChallengeDate) {
+        if (!dailyBest || dailyBest.date !== dailyChallengeDate || moveCount < dailyBest.moves) {
+          dailyBest = { date: dailyChallengeDate, moves: moveCount };
+        }
+        persistLocalData(true);
+        renderCampaignLevels();
+        announce("每日挑战完成！本局 " + moveCount + " 步" + (dailyBest.date === dailyChallengeDate ? "，个人最佳 " + dailyBest.moves + " 步。" : "。"));
+      } else {
+        announce("整理完成！所有图案都回到了自己的列里。");
+      }
       showVictoryCelebration();
     } else if (victoryCelebrated) {
       victoryCelebrated = false;
@@ -1751,13 +1875,16 @@
     selected = null;
     moveCount = 0;
     moveHistory = [];
-    board = buildSolvableBoard(settings);
+    if (dailyMode) dailyChallengeDate = localDateKey();
+    board = buildSolvableBoard(settings, dailyMode ? dateSeed(dailyChallengeDate) : undefined);
     initialBoard = cloneBoard(board);
     victoryCelebrated = false;
     clearCelebration();
     render();
     persistLocalData(true);
-    announce(message || "新的一局开始啦。点一列，再点目标列；顶部连续相同的图案会整组一起移动。");
+    announce(message || (dailyMode
+      ? formatDateKey(dailyChallengeDate) + " 的每日棋盘已重开。同一天的棋盘相同。"
+      : "新的一局开始啦。点一列，再点目标列；顶部连续相同的图案会整组一起移动。"));
   }
 
   function restartGame() {
@@ -1958,12 +2085,15 @@
   ui.closeCampaignButton.addEventListener("click", closeCampaignDialog);
   ui.closeCampaignFooterButton.addEventListener("click", closeCampaignDialog);
   ui.campaignLevelGrid.addEventListener("click", handleCampaignLevelClick);
+  ui.dailyChallengeButton.addEventListener("click", handleDailyChallengeClick);
   ui.closeSettingsButton.addEventListener("click", closeSettings);
   ui.cancelSettingsButton.addEventListener("click", closeSettings);
   ui.applySettingsButton.addEventListener("click", function () {
     if (isAnimating) return;
     settings = readSettingsForm();
     campaignMode = false;
+    dailyMode = false;
+    dailyChallengeDate = "";
     closeSettings();
     setNewGame();
   });
@@ -2001,6 +2131,13 @@
   });
   ui.restartButton.addEventListener("click", restartGame);
   ui.shuffleButton.addEventListener("click", function () {
+    if (dailyMode) {
+      dailyMode = false;
+      dailyChallengeDate = "";
+      campaignMode = false;
+      setNewGame("已离开每日挑战，开始自由随机局。");
+      return;
+    }
     setNewGame("棋盘已重新打乱，新的挑战开始啦。");
   });
   ui.undoButton.addEventListener("click", undoMove);

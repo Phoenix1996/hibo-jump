@@ -346,8 +346,16 @@ h1, h2, h3, p { margin-top: 0; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 25px 20px; border-top: 1px solid #edf2ee; background: #f8fbf8; }
 .dialog-actions .primary-button { min-width: 142px; }
 
-.campaign-dialog { width: min(560px, calc(100% - 28px)); }
-.campaign-dialog-content { padding: 0 25px 20px; }
+.campaign-dialog { width: min(560px, calc(100% - 28px)); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); }
+.campaign-dialog[open] { display: flex; flex-direction: column; }
+.campaign-dialog .dialog-header, .campaign-dialog-actions { flex-shrink: 0; }
+.campaign-dialog-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 25px 20px; }
+.daily-challenge-card { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 11px; margin: 0 0 15px; padding: 12px; border: 1px solid #d8eee2; border-radius: 16px; background: linear-gradient(120deg, #effaf2, #f2faf8); }
+.daily-challenge-icon { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 13px; background: linear-gradient(145deg, #4cb9a1, #147f79); color: #fff; font-size: 18px; box-shadow: 0 4px 10px rgba(31,132,113,.18); }
+.daily-challenge-copy { display: grid; min-width: 0; gap: 4px; }
+.daily-challenge-copy strong { color: #365f59; font-size: 11px; }
+.daily-challenge-copy small { overflow: hidden; color: #8aa49b; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.daily-challenge-button { display: inline-flex; min-height: 37px; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border-radius: 11px; font-size: 10px; white-space: nowrap; }
 .campaign-progress { margin: 0 0 12px; color: #718f88; font-size: 11px; font-weight: 700; }
 .campaign-level-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
 .campaign-level-button { display: grid; min-height: 48px; place-items: center; padding: 6px; border: 1px solid #e1ece6; border-radius: 13px; background: #fff; color: #52736d; cursor: pointer; font-size: 12px; font-weight: 800; transition: transform 150ms ease, background 150ms ease, border-color 150ms ease; }
@@ -390,6 +398,11 @@ h1, h2, h3, p { margin-top: 0; }
 
 @media (max-width: 760px) {
   .campaign-dialog-content { padding: 0 19px 16px; }
+  .daily-challenge-card { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; margin-bottom: 12px; padding: 9px; border-radius: 13px; }
+  .daily-challenge-icon { width: 34px; height: 34px; border-radius: 11px; font-size: 15px; }
+  .daily-challenge-copy strong { font-size: 10px; }
+  .daily-challenge-copy small { font-size: 8px; }
+  .daily-challenge-button { min-height: 33px; gap: 5px; padding: 0 8px; border-radius: 9px; font-size: 9px; }
   .campaign-level-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
   .campaign-level-button { min-height: 42px; border-radius: 11px; font-size: 11px; }
   .campaign-dialog-actions { align-items: flex-start; }
