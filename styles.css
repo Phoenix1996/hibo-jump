@@ -259,10 +259,11 @@ h1, h2, h3, p { margin-top: 0; }
 .reserve-placeholder { color: #c7d8d1; font-size: 15px; }
 .reserve-empty-copy { color: #a5b4b0; font-size: 11px; }
 
-.game-footer { display: flex; min-height: 74px; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 30px 18px; }
-.game-message-wrap { display: flex; min-width: 0; align-items: center; gap: 9px; }
+.game-footer { display: flex; min-height: 82px; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 30px 18px; }
+.game-message-wrap { display: flex; width: 100%; height: 48px; min-width: 0; min-height: 48px; align-items: center; gap: 9px; overflow: hidden; }
 .message-mark { flex: 0 0 auto; color: #56a997; font-size: 16px; }
-.game-message-wrap p { min-width: 0; flex: 1 1 auto; margin: 0; color: #758d8c; font-size: 11px; line-height: 1.5; }
+.game-message-wrap p { min-width: 0; flex: 1 1 auto; overflow: hidden; margin: 0; color: #758d8c; font-size: 11px; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; }
+.stat-copy { white-space: nowrap; }
 .cancel-selection { flex: 0 0 auto; padding: 5px 8px; border: 0; border-radius: 9px; background: #edf6f1; color: #438579; cursor: pointer; font-size: 10px; font-weight: 700; }
 .game-actions { display: flex; flex: 0 0 auto; gap: 8px; }
 .secondary-button, .primary-button {
@@ -575,7 +576,7 @@ h1, h2, h3, p { margin-top: 0; }
   .reserve-slot .tile { border-radius: 7px; }
   .reserve-placeholder { color: rgba(255,255,255,.8); }
   .game-footer { flex: 0 0 auto; min-height: 0; align-items: stretch; flex-direction: column; gap: 4px; padding: 5px 1px 2px; }
-  .game-message-wrap { min-height: 17px; justify-content: center; gap: 4px; }
+  .game-message-wrap { height: 17px; min-height: 17px; justify-content: center; gap: 4px; }
   .message-mark { color: #fff4b9; font-size: 11px; }
   .game-message-wrap p { overflow: hidden; color: rgba(255,255,255,.94); font-size: 8px; text-align: center; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px rgba(8,65,108,.3); }
   .cancel-selection { padding: 3px 6px; background: rgba(255,255,255,.75); font-size: 8px; }
@@ -654,7 +655,7 @@ h1, h2, h3, p { margin-top: 0; }
   .reserve-slots { min-height: 28px; }
   .reserve-slot { width: 29px; height: 29px; flex-basis: 29px; }
   .game-footer { gap: 2px; padding-top: 3px; }
-  .game-message-wrap { min-height: 13px; }
+  .game-message-wrap { height: 13px; min-height: 13px; }
   .game-actions { gap: 3px; }
   .game-actions #shuffleButton, .game-actions #undoButton { min-height: 39px; }
   .game-actions #restartButton, .game-actions #saveButton, .game-actions #newGameButton { min-height: 25px; }
