@@ -921,6 +921,12 @@
     const randomSource = Number.isInteger(seed) ? createSeededRandom(seed) : Math.random;
     const pickIndex = function (max) { return randomIndex(max, randomSource); };
     const fixedCount = Math.min(currentSettings.fixedCount, currentSettings.capacity - 1, currentSettings.patternCount);
+    // Fix the number of columns holding white spaces for the whole generation run;
+    // otherwise quality selection across multiple candidates would favor spreading them.
+    const blankDistributionRoll = pickIndex(100);
+    const blankPatternCount = fixedCount === 0 ? 0 : fixedCount === 1 ? 1 :
+      fixedCount === 2 ? (blankDistributionRoll < 65 ? 1 : 2) :
+        (blankDistributionRoll < 40 ? 1 : blankDistributionRoll < 80 ? 2 : 3);
     // Compare several solvable reverse walks so hard boards are less likely to leave
     // large same-pattern runs connected just because one shuffle happened to do so.
     const attemptCount = currentSettings.difficulty === "hard" ? 12 : 1;
@@ -937,12 +943,6 @@
         availablePatterns[index] = availablePatterns[swapIndex];
         availablePatterns[swapIndex] = value;
       }
-      // Fixed blanks represent missing tiles. Keep them grouped more often than
-      // fully spread so a board can hide several missing tiles in one column.
-      const blankDistributionRoll = pickIndex(100);
-      const blankPatternCount = fixedCount === 0 ? 0 : fixedCount === 1 ? 1 :
-        fixedCount === 2 ? (blankDistributionRoll < 65 ? 1 : 2) :
-          (blankDistributionRoll < 40 ? 1 : blankDistributionRoll < 80 ? 2 : 3);
       const blankCountsByPattern = new Map();
       availablePatterns.slice(0, blankPatternCount).forEach(function (index) {
         blankCountsByPattern.set("p" + index, 1);
