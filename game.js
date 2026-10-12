@@ -854,7 +854,7 @@
   function flightDuration(sourceRect, targetRect, reducedMotion) {
     if (reducedMotion) return 90;
     const distance = Math.hypot(targetRect.left - sourceRect.left, targetRect.top - sourceRect.top);
-    return Math.max(250, Math.min(360, 235 + distance * 0.16));
+    return Math.max(180, Math.min(250, 180 + distance * 0.11));
   }
 
   async function animateFlightTile(tile, sourceRect, targetRect, reducedMotion) {
@@ -890,7 +890,7 @@
     const deltaX = targetRect.left - sourceRect.left;
     const deltaY = targetRect.top - sourceRect.top;
     const travel = "perspective(700px) translate3d(" + deltaX + "px, " + deltaY + "px, 0) ";
-    const duration = reducedMotion ? 70 : 170;
+    const duration = reducedMotion ? 70 : 130;
     if (typeof tile.animate === "function") {
       const close = tile.animate([
         { transform: travel + "rotateY(0deg) scale(1)", opacity: 1 },
@@ -925,7 +925,7 @@
       { transform: "scale(.985, 1.025)", offset: .72 },
       { transform: "scale(1)" }
     ], {
-      duration: reducedMotion ? 75 : 135,
+      duration: reducedMotion ? 75 : 100,
       easing: "cubic-bezier(.2,.75,.25,1)",
       fill: "none"
     });
@@ -1262,7 +1262,7 @@
         ? revealedCell.animate([
           { transform: "perspective(360px) rotateY(88deg) scale(.86)", opacity: .72 },
           { transform: "perspective(360px) rotateY(0) scale(1)", opacity: 1 }
-        ], { duration: reducedMotion ? 70 : 210, easing: "cubic-bezier(.2,.75,.25,1)", fill: "both" })
+        ], { duration: reducedMotion ? 70 : 150, easing: "cubic-bezier(.2,.75,.25,1)", fill: "both" })
         : null;
 
       const targetCell = ui.columns.querySelector(
@@ -1274,8 +1274,12 @@
 
       const flight = createFlightTile(token, sourceRect);
       targetCell.classList.add("is-flying");
-      if (revealAnimation) await revealAnimation.finished.catch(function () {});
-      await animateFlightTile(flight, sourceRect, targetRect, reducedMotion);
+      const flightPromise = animateFlightTile(flight, sourceRect, targetRect, reducedMotion);
+      if (revealAnimation) {
+        await Promise.all([flightPromise, revealAnimation.finished.catch(function () {})]);
+      } else {
+        await flightPromise;
+      }
       await revealFlightTile(flight, token, sourceRect, targetRect, reducedMotion);
       flight.remove();
       targetCell.classList.remove("is-flying");
