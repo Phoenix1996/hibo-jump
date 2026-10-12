@@ -33,39 +33,39 @@
       id: "pokemon",
       name: "宝可梦主题",
       patterns: [
-        { id: "p1", name: "超梦", glyph: "💜", color: "#a078c8", image: "assets/themes/pokemon/超梦.png" },
-        { id: "p2", name: "杰尼龟", glyph: "💧", color: "#65a9d1", image: "assets/themes/pokemon/杰尼龟.png" },
-        { id: "p3", name: "可达鸭", glyph: "🦆", color: "#e8bd4e", image: "assets/themes/pokemon/可达鸭.png" },
-        { id: "p4", name: "妙蛙种子", glyph: "🌱", color: "#67a66b", image: "assets/themes/pokemon/妙蛙种子 (2).png" },
-        { id: "p5", name: "皮卡丘", glyph: "⚡", color: "#e5bb43", image: "assets/themes/pokemon/皮卡丘.png" },
-        { id: "p6", name: "仙子伊布", glyph: "🎀", color: "#cb8cba", image: "assets/themes/pokemon/仙子伊布.png" },
-        { id: "p7", name: "小火龙", glyph: "🔥", color: "#e58b55", image: "assets/themes/pokemon/小火龙.png" }
+        { id: "p1", name: "超梦", glyph: "💜", color: "#a078c8", image: "assets/themes/pokemon/超梦.webp" },
+        { id: "p2", name: "杰尼龟", glyph: "💧", color: "#65a9d1", image: "assets/themes/pokemon/杰尼龟.webp" },
+        { id: "p3", name: "可达鸭", glyph: "🦆", color: "#e8bd4e", image: "assets/themes/pokemon/可达鸭.webp" },
+        { id: "p4", name: "妙蛙种子", glyph: "🌱", color: "#67a66b", image: "assets/themes/pokemon/妙蛙种子 (2).webp" },
+        { id: "p5", name: "皮卡丘", glyph: "⚡", color: "#e5bb43", image: "assets/themes/pokemon/皮卡丘.webp" },
+        { id: "p6", name: "仙子伊布", glyph: "🎀", color: "#cb8cba", image: "assets/themes/pokemon/仙子伊布.webp" },
+        { id: "p7", name: "小火龙", glyph: "🔥", color: "#e58b55", image: "assets/themes/pokemon/小火龙.webp" }
       ]
     },
     "pokemon-2": {
       id: "pokemon-2",
       name: "宝可梦徽章主题",
       patterns: [
-        { id: "p1", name: "徽章伙伴 01", glyph: "🐉", color: "#d8aa62", image: "assets/themes/pokemon-2/10662101-a808-4b0b-80e0-83e38c90b9ca.png" },
-        { id: "p2", name: "徽章伙伴 02", glyph: "🍃", color: "#78b77a", image: "assets/themes/pokemon-2/32dfc1c7-085d-462a-a9ab-502df96fd390.png" },
-        { id: "p3", name: "徽章伙伴 03", glyph: "😴", color: "#7bb6c4", image: "assets/themes/pokemon-2/340914f4-d72f-4568-b705-46a3c206f744.png" },
-        { id: "p4", name: "徽章伙伴 04", glyph: "🌙", color: "#8f7fbd", image: "assets/themes/pokemon-2/677d193c-1e67-44b5-a854-1e5eae5970bf.png" },
-        { id: "p5", name: "徽章伙伴 05", glyph: "🔥", color: "#dc7452", image: "assets/themes/pokemon-2/74ea19f1-43bc-496f-965d-6f4472eda4c5.png" },
-        { id: "p6", name: "徽章伙伴 06", glyph: "✨", color: "#d783b7", image: "assets/themes/pokemon-2/7695ac6b-e28d-4404-8bb9-e6e5ed611fbd.png" },
-        { id: "p7", name: "徽章伙伴 07", glyph: "💙", color: "#628ac3", image: "assets/themes/pokemon-2/d7a28cea-f41a-4579-9e25-ee6070c7429c.png" }
+        { id: "p1", name: "徽章伙伴 01", glyph: "🐉", color: "#d8aa62", image: "assets/themes/pokemon-2/10662101-a808-4b0b-80e0-83e38c90b9ca.webp" },
+        { id: "p2", name: "徽章伙伴 02", glyph: "🍃", color: "#78b77a", image: "assets/themes/pokemon-2/32dfc1c7-085d-462a-a9ab-502df96fd390.webp" },
+        { id: "p3", name: "徽章伙伴 03", glyph: "😴", color: "#7bb6c4", image: "assets/themes/pokemon-2/340914f4-d72f-4568-b705-46a3c206f744.webp" },
+        { id: "p4", name: "徽章伙伴 04", glyph: "🌙", color: "#8f7fbd", image: "assets/themes/pokemon-2/677d193c-1e67-44b5-a854-1e5eae5970bf.webp" },
+        { id: "p5", name: "徽章伙伴 05", glyph: "🔥", color: "#dc7452", image: "assets/themes/pokemon-2/74ea19f1-43bc-496f-965d-6f4472eda4c5.webp" },
+        { id: "p6", name: "徽章伙伴 06", glyph: "✨", color: "#d783b7", image: "assets/themes/pokemon-2/7695ac6b-e28d-4404-8bb9-e6e5ed611fbd.webp" },
+        { id: "p7", name: "徽章伙伴 07", glyph: "💙", color: "#628ac3", image: "assets/themes/pokemon-2/d7a28cea-f41a-4579-9e25-ee6070c7429c.webp" }
       ]
     },
     digimon: {
       id: "digimon",
       name: "数码宝贝主题",
       patterns: [
-        { id: "p1", name: "数码伙伴 01", glyph: "🌿", color: "#81aa67", image: "assets/themes/digimon/01c6440d-c38e-4a00-ba88-f68bc7a3ffc1.png" },
-        { id: "p2", name: "数码伙伴 02", glyph: "🦊", color: "#daa955", image: "assets/themes/digimon/0cbedb23-3712-4f74-8bbf-31f2116362eb.png" },
-        { id: "p3", name: "数码伙伴 03", glyph: "🔥", color: "#dc9857", image: "assets/themes/digimon/8baa6bc8-d4a5-492f-bec5-5721c9a1985c.png" },
-        { id: "p4", name: "数码伙伴 04", glyph: "🌸", color: "#d98eb0", image: "assets/themes/digimon/932aab38-b902-4451-9689-8dde7b6ce3a7.png" },
-        { id: "p5", name: "数码伙伴 05", glyph: "🐺", color: "#8e9db2", image: "assets/themes/digimon/9b8da726-e7d9-44f9-8832-f5fcdcd962b2.png" },
-        { id: "p6", name: "数码伙伴 06", glyph: "⚪", color: "#afc5dc", image: "assets/themes/digimon/b78e61e2-7d47-45ef-8467-a1c6163931fe.png" },
-        { id: "p7", name: "数码伙伴 07", glyph: "💗", color: "#dd8cae", image: "assets/themes/digimon/ff3a266e-fcbc-40e2-9615-666a457124c3.png" }
+        { id: "p1", name: "数码伙伴 01", glyph: "🌿", color: "#81aa67", image: "assets/themes/digimon/01c6440d-c38e-4a00-ba88-f68bc7a3ffc1.webp" },
+        { id: "p2", name: "数码伙伴 02", glyph: "🦊", color: "#daa955", image: "assets/themes/digimon/0cbedb23-3712-4f74-8bbf-31f2116362eb.webp" },
+        { id: "p3", name: "数码伙伴 03", glyph: "🔥", color: "#dc9857", image: "assets/themes/digimon/8baa6bc8-d4a5-492f-bec5-5721c9a1985c.webp" },
+        { id: "p4", name: "数码伙伴 04", glyph: "🌸", color: "#d98eb0", image: "assets/themes/digimon/932aab38-b902-4451-9689-8dde7b6ce3a7.webp" },
+        { id: "p5", name: "数码伙伴 05", glyph: "🐺", color: "#8e9db2", image: "assets/themes/digimon/9b8da726-e7d9-44f9-8832-f5fcdcd962b2.webp" },
+        { id: "p6", name: "数码伙伴 06", glyph: "⚪", color: "#afc5dc", image: "assets/themes/digimon/b78e61e2-7d47-45ef-8467-a1c6163931fe.webp" },
+        { id: "p7", name: "数码伙伴 07", glyph: "💗", color: "#dd8cae", image: "assets/themes/digimon/ff3a266e-fcbc-40e2-9615-666a457124c3.webp" }
       ]
     }
   };
@@ -951,7 +951,7 @@
   function patternVisualHtml(pattern) {
     if (!pattern.image) return escapeHtml(pattern.glyph);
     return '<img class="pattern-art" src="' + escapeHtml(encodeURI(pattern.image)) + '" alt="' +
-      escapeHtml(pattern.glyph) + '" draggable="false">';
+      escapeHtml(pattern.glyph) + '" loading="lazy" decoding="async" draggable="false">';
   }
 
   function columnDescription(column, index) {
