@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f3f7f5">
+    <title>海宝跳跳 · 图案归列</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="game.js" defer></script>
+  </head>
+  <body>
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="海宝跳跳首页">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+          <span class="brand-copy">
+            <strong>海宝跳跳</strong>
+            <small>轻松整理，慢慢通关</small>
+          </span>
+        </a>
+        <div class="topbar-actions">
+          <label class="theme-picker">
+            <span class="sr-only">选择图案主题</span>
+            <span class="theme-icon" aria-hidden="true">◉</span>
+            <select id="themeSelect" aria-label="图案主题">
+              <option value="ocean">海洋主题</option>
+              <option value="fruit">水果主题</option>
+            </select>
+            <span class="select-chevron" aria-hidden="true">⌄</span>
+          </label>
+          <button class="icon-button settings-button" id="settingsButton" type="button" aria-haspopup="dialog">
+            <span aria-hidden="true">⚙</span>
+            <span>设置</span>
+          </button>
+        </div>
+      </header>
+
+      <main>
+        <section class="intro">
+          <div class="intro-copy">
+            <p class="eyebrow"><span class="eyebrow-dot"></span> 小小整理挑战</p>
+            <h1>把相同的图案，<span>放在一起。</span></h1>
+            <p class="intro-text">移动顶部的图案，让每一列都整整齐齐。慢慢来，每一步都算数。</p>
+          </div>
+          <div class="intro-decoration" aria-hidden="true">
+            <span class="bubble bubble-a">✦</span>
+            <span class="bubble bubble-b">✧</span>
+            <span class="floating-token">🐚</span>
+          </div>
+        </section>
+
+        <section class="game-card" aria-label="游戏区域">
+          <div class="game-card-header">
+            <div>
+              <div class="game-title-row">
+                <h2>图案归列</h2>
+                <span class="level-badge" id="levelBadge">普通</span>
+              </div>
+              <p class="board-caption" id="boardCaption">每列最多 4 个图案 · 顶部同图才能放入</p>
+            </div>
+            <div class="stats">
+              <div class="stat-chip">
+                <span class="stat-icon moves-icon" aria-hidden="true">↗</span>
+                <span class="stat-copy"><small>移动</small><strong id="moveCount">0</strong></span>
+              </div>
+              <div class="stat-chip progress-chip">
+                <span class="stat-icon progress-icon" aria-hidden="true">✦</span>
+                <span class="stat-copy"><small>已整理</small><strong id="sortedCount">0 / 4</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="board-surface">
+            <div class="section-heading">
+              <div>
+                <span class="section-kicker">第一步</span>
+                <h3>整理图案</h3>
+              </div>
+              <span class="capacity-note"><span class="capacity-dot"></span> 列容量 <strong id="capacityLabel">4</strong></span>
+            </div>
+            <div class="board-scroll" id="boardScroll">
+              <div class="columns" id="columns" role="group" aria-label="图案列"></div>
+            </div>
+
+            <div class="reserve-section" id="reserveSection">
+              <div class="reserve-heading">
+                <div>
+                  <span class="section-kicker">临时收纳</span>
+                  <h3>暂存位</h3>
+                </div>
+                <p>点选列顶图案，再选一个空位</p>
+              </div>
+              <div class="reserve-slots" id="reserveSlots" role="group" aria-label="图案暂存位"></div>
+            </div>
+          </div>
+
+          <div class="game-footer">
+            <div class="game-message-wrap">
+              <span class="message-mark" aria-hidden="true">✧</span>
+              <p id="gameMessage" role="status" aria-live="polite">点选一列，再点目标列；同图案会整组移动。</p>
+              <button id="cancelSelectionButton" class="cancel-selection" type="button" hidden>取消选择</button>
+            </div>
+            <div class="game-actions">
+              <button id="restartButton" class="secondary-button" type="button">
+                <span aria-hidden="true">↺</span> 重新开始
+              </button>
+              <button id="newGameButton" class="primary-button" type="button">
+                <span aria-hidden="true">✦</span> 新的一局
+              </button>
+            </div>
+          </div>
+
+          <div class="victory-banner" id="victoryBanner" hidden>
+            <span class="victory-sparkle" aria-hidden="true">✦</span>
+            <div><strong>整理完成！</strong><span>每种图案都找到自己的位置了。</span></div>
+            <button id="victoryNewGameButton" type="button">再玩一局 <span aria-hidden="true">→</span></button>
+          </div>
+        </section>
+
+        <section class="how-to-play" aria-label="玩法说明">
+          <div class="how-title">
+            <span class="how-icon" aria-hidden="true">?</span>
+            <div><strong>怎么玩</strong><small>三步开始整理</small></div>
+          </div>
+          <div class="how-step"><span>01</span><p>点选有图案的列，或直接拖动。</p></div>
+          <div class="how-step"><span>02</span><p>同图案可以整组移动到一起。</p></div>
+          <div class="how-step"><span>03</span><p>需要腾位置时，暂存单个图案。</p></div>
+        </section>
+
+        <footer class="page-footer">
+          <span>海宝跳跳</span>
+          <span class="footer-separator">·</span>
+          <span>一小步一小步，刚刚好</span>
+        </footer>
+      </main>
+    </div>
+
+    <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-dot"></span> 调整你的挑战</p>
+          <h2 id="settingsTitle">游戏设置</h2>
+        </div>
+        <button class="close-button" id="closeSettingsButton" type="button" aria-label="关闭设置">×</button>
+      </div>
+      <div class="settings-content">
+        <label class="field-label" for="difficultySelect">难度等级</label>
+        <select class="form-select" id="difficultySelect">
+          <option value="easy">简单 · 慢慢熟悉</option>
+          <option value="normal">普通 · 刚刚好</option>
+          <option value="hard">困难 · 多想一步</option>
+          <option value="custom">自定义</option>
+        </select>
+
+        <p class="settings-hint" id="difficultyHint">难度会调整图案种类、暂存位和开局打乱强度。</p>
+
+        <div class="settings-grid">
+          <label class="setting-field" for="patternCountInput">
+            <span>图案种类</span>
+            <span class="field-control"><input id="patternCountInput" type="number" min="2" max="6" step="1"><small>种</small></span>
+          </label>
+          <label class="setting-field" for="capacityInput">
+            <span>每列容量</span>
+            <span class="field-control"><input id="capacityInput" type="number" min="2" max="6" step="1"><small>个</small></span>
+          </label>
+          <label class="setting-field" for="reserveCountInput">
+            <span>暂存位</span>
+            <span class="field-control"><input id="reserveCountInput" type="number" min="0" max="8" step="1"><small>个</small></span>
+          </label>
+          <label class="setting-field" for="shuffleStepsInput">
+            <span>打乱强度</span>
+            <span class="field-control"><input id="shuffleStepsInput" type="number" min="10" max="120" step="5"><small>步</small></span>
+          </label>
+        </div>
+
+        <div class="settings-note">
+          <span aria-hidden="true">✧</span>
+          <p>每一局都会从已完成的棋盘生成，保证有解。</p>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button id="cancelSettingsButton" class="secondary-button" type="button">取消</button>
+        <button id="applySettingsButton" class="primary-button" type="button">应用并开始新局</button>
+      </div>
+    </dialog>
+
+    <div class="flight-layer" id="flightLayer" aria-hidden="true"></div>
+  </body>
+</html>
