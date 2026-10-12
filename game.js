@@ -228,6 +228,22 @@
     return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
   }
 
+  function shiftDateKey(value, days) {
+    const date = new Date(value + "T00:00:00Z");
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+  }
+
+  function dailyStreakCount(history, today) {
+    let date = history[today] ? today : shiftDateKey(today, -1);
+    let streak = 0;
+    while (history[date]) {
+      streak += 1;
+      date = shiftDateKey(date, -1);
+    }
+    return streak;
+  }
+
   function normalizeDailyHistory(source, legacyBest) {
     const history = Object.create(null);
     if (source && typeof source === "object" && !Array.isArray(source)) {
@@ -615,11 +631,14 @@
     const dailyActive = dailyMode && dailyChallengeDate === today;
     const todayBest = dailyHistory[today];
     const completedDailyDays = Object.keys(dailyHistory).length;
+    const dailyStreak = dailyStreakCount(dailyHistory, today);
     ui.dailyChallengeDate.textContent = formatDateKey(today);
     ui.dailyChallengeMeta.textContent = todayBest
-      ? "本日最佳 " + todayBest + " 步 · 累计通关 " + completedDailyDays + " 天"
-      : completedDailyDays
-        ? "每日更新 · 已通关 " + completedDailyDays + " 天"
+      ? "本日最佳 " + todayBest + " 步 · 连胜 " + dailyStreak + " 天"
+      : dailyStreak
+        ? "连续通关 " + dailyStreak + " 天 · 完成今日可延续"
+        : completedDailyDays
+          ? "每日更新 · 累计通关 " + completedDailyDays + " 天"
         : "每天更新 · 同日玩家玩同一盘";
     ui.dailyChallengeAction.textContent = dailyActive ? "重开今日" : "开始挑战";
     ui.dailyChallengeButton.setAttribute("aria-label", dailyActive
