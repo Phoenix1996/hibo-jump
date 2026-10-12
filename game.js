@@ -932,6 +932,7 @@
     const attemptCount = currentSettings.difficulty === "hard" ? 12 : 1;
     const reverseLookback = Math.min(16, Math.max(10, currentSettings.patternCount * 2));
     let bestColumns = null;
+    let bestReverseSteps = -1;
     let bestQuality = -Infinity;
 
     for (let attempt = 0; attempt < attemptCount; attempt += 1) {
@@ -967,6 +968,7 @@
       columns.push([]);
 
       const recentReverseMoves = [];
+      let completedReverseSteps = 0;
       for (let step = 0; step < currentSettings.shuffleSteps; step += 1) {
         const candidates = [];
         for (let donorIndex = 0; donorIndex < columns.length; donorIndex += 1) {
@@ -1004,6 +1006,7 @@
         columns[chosen.targetIndex].push.apply(columns[chosen.targetIndex], group);
         recentReverseMoves.push(chosen);
         if (recentReverseMoves.length > reverseLookback) recentReverseMoves.shift();
+        completedReverseSteps += 1;
       }
 
       const alreadySolved = columns.filter(function (column) {
@@ -1021,7 +1024,9 @@
       }
 
       const quality = scrambleQuality(columns, currentSettings.capacity);
-      if (quality > bestQuality) {
+      if (completedReverseSteps > bestReverseSteps ||
+          (completedReverseSteps === bestReverseSteps && quality > bestQuality)) {
+        bestReverseSteps = completedReverseSteps;
         bestQuality = quality;
         bestColumns = columns;
       }
