@@ -271,6 +271,52 @@
     return { columns: columns, reserve: reserve };
   }
 
+  function countBlankTiles(snapshotBoard) {
+    return snapshotBoard.columns.reduce(function (total, column) {
+      return total + column.filter(isBlankToken).length;
+    }, 0);
+  }
+
+  function countPatternTiles(snapshotBoard, patternId) {
+    let count = 0;
+    snapshotBoard.columns.forEach(function (column) {
+      column.forEach(function (token) {
+        if (!isBlankToken(token) && actualPatternId(token) === patternId) count += 1;
+      });
+    });
+    snapshotBoard.reserve.forEach(function (token) {
+      if (token && actualPatternId(token) === patternId) count += 1;
+    });
+    return count;
+  }
+
+  function migrateMissingBlankTiles(currentBoard, startBoard, boardSettings) {
+    const currentBlankCount = countBlankTiles(currentBoard);
+    const startBlankCount = countBlankTiles(startBoard);
+    const missingCount = boardSettings.fixedCount - Math.min(currentBlankCount, startBlankCount);
+    if (missingCount <= 0 || currentBlankCount !== startBlankCount) return false;
+
+    let migratedCount = 0;
+    for (let patternIndex = 1; patternIndex <= boardSettings.patternCount && migratedCount < missingCount; patternIndex += 1) {
+      const patternId = "p" + patternIndex;
+      if (countPatternTiles(currentBoard, patternId) !== boardSettings.capacity ||
+          countPatternTiles(startBoard, patternId) !== boardSettings.capacity) continue;
+
+      for (let columnIndex = 0; columnIndex < currentBoard.columns.length; columnIndex += 1) {
+        const currentColumn = currentBoard.columns[columnIndex];
+        const startColumn = startBoard.columns[columnIndex];
+        const currentBase = currentColumn[0];
+        const startBase = startColumn[0];
+        if (currentBase !== patternId || startBase !== patternId || isFixedToken(currentBase) || isFixedToken(startBase)) continue;
+        currentColumn[0] = "blank";
+        startColumn[0] = "blank";
+        migratedCount += 1;
+        break;
+      }
+    }
+    return migratedCount > 0;
+  }
+
   function normalizeSnapshot(source) {
     if (!source || typeof source !== "object") return null;
     const snapshotSettings = normalizeSettings(source.settings);
@@ -285,6 +331,7 @@
       initialBoard = cloneBoard(snapshotBoard);
       migratedBlankLayout = true;
     }
+    migratedBlankLayout = migrateMissingBlankTiles(snapshotBoard, initialBoard, snapshotSettings) || migratedBlankLayout;
     return {
       settings: snapshotSettings,
       themeId: THEMES[source.themeId] ? source.themeId : "ocean",
@@ -903,7 +950,7 @@
 
   function patternVisualHtml(pattern) {
     if (!pattern.image) return escapeHtml(pattern.glyph);
-    return '<img class="pattern-art" src="' + escapeHtml(encodeURI(pattern.image)) + '" loading="lazy" decoding="async" alt="' +
+    return '<img class="pattern-art" src="' + escapeHtml(encodeURI(pattern.image)) + '" alt="' +
       escapeHtml(pattern.glyph) + '" draggable="false">';
   }
 
