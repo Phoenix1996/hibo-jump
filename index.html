@@ -75,10 +75,6 @@
                 <span class="stat-icon moves-icon" aria-hidden="true">↗</span>
                 <span class="stat-copy"><small>移动</small><strong id="moveCount">0</strong></span>
               </div>
-              <div class="stat-chip progress-chip">
-                <span class="stat-icon progress-icon" aria-hidden="true">✦</span>
-                <span class="stat-copy"><small>已整理</small><strong id="sortedCount">0 / 4</strong></span>
-              </div>
             </div>
           </div>
 
@@ -190,7 +186,7 @@
           </label>
           <label class="setting-field" for="shuffleStepsInput">
             <span>打乱强度</span>
-            <span class="field-control"><input id="shuffleStepsInput" type="number" min="10" max="600" step="10"><small>步</small></span>
+            <span class="field-control"><input id="shuffleStepsInput" type="number" min="10" max="2400" step="10"><small>步</small></span>
           </label>
           <label class="setting-field" for="mysteryCountInput">
             <span>隐藏问号</span>
@@ -204,26 +200,12 @@
 
         <div class="settings-note">
           <span aria-hidden="true">✧</span>
-          <p>每一局都会从已完成的棋盘生成，保证有解。</p>
+          <p>每局从符合固定白格规则的完成棋盘反向打乱，保证有解。</p>
         </div>
       </div>
       <div class="dialog-actions">
         <button id="cancelSettingsButton" class="secondary-button" type="button">取消</button>
         <button id="applySettingsButton" class="primary-button" type="button">应用并开始新局</button>
-      </div>
-    </dialog>
-
-    <dialog class="settings-dialog guess-dialog" id="guessDialog" aria-labelledby="guessTitle">
-      <div class="dialog-header">
-        <div>
-          <p class="eyebrow"><span class="eyebrow-dot"></span> 固定格不能移动</p>
-          <h2 id="guessTitle">猜猜白格是什么？</h2>
-        </div>
-        <button class="close-button" id="closeGuessButton" type="button" aria-label="关闭猜图案">×</button>
-      </div>
-      <div class="guess-content">
-        <p id="guessFeedback" class="guess-feedback">点选你认为正确的图案。</p>
-        <div class="guess-choices" id="guessChoices" role="group" aria-label="选择猜测的图案"></div>
       </div>
     </dialog>
 
