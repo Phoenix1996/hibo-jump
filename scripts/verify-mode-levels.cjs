@@ -57,6 +57,20 @@ for (const [index, cfg] of configs.entries()) {
     assert(puzzle.columns.every(c => c.length <= cfg.capacity));
     assert(puzzle.columns.every(c => !c.length || c.at(-1)[0] !== "?"));
     assert.equal(puzzle.columns.flat().filter(t => t === "blank").length, cfg.fixedCount);
+    if (cfg.randomMix) {
+      let pairs = 0;
+      for (const column of puzzle.columns) {
+        const colors = column.map(t => t.replace(/^\?/, ""));
+        for (let level = 1; level < colors.length; level += 1) {
+          if (colors[level] === "blank" || colors[level] !== colors[level - 1]) continue;
+          pairs += 1;
+          assert(level < 2 || colors[level] !== colors[level - 2], "Campaign triple at level " + (index - 1));
+        }
+        if (column.length > 1) assert(new Set(colors.filter(t => t !== "blank")).size >= 4);
+      }
+      assert(pairs <= 3);
+      assert(puzzle.generation.lowerBoundMoves >= cfg.patternCount * 4);
+    }
     assert.deepEqual(puzzle.reserve, Array(cfg.reserveCount).fill(null));
     const numeric = { columns: puzzle.columns.map(c => c.map(t => t === "blank" ? 0 :
       Number(t.replace(/^[?]?[p]/, "")) + (t[0] === "?" ? 16 : 0))), reserve: [] };

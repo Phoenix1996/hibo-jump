@@ -1,7 +1,7 @@
 (function (root) {
   "use strict";
   const levels = typeof module !== "undefined" && module.exports ? require("./level-generator.js") : root.HiboLevels;
-  const BOARD_GENERATION_VERSION = 3;
+  const BOARD_GENERATION_VERSION = 4;
 
   function actualPatternId(token) {
     if (isBlankToken(token)) return null;
@@ -524,7 +524,7 @@
   }
 
   function* generateSolvableBoardSteps(currentSettings, seed) {
-    if (currentSettings.difficulty === "hard") {
+    if (currentSettings.difficulty === "hard" || currentSettings.randomMix === true) {
       return yield* levels.generate(currentSettings, seed);
     }
     const attempts = currentSettings.reserveCount === 0 ? 18 : 6;

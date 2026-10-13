@@ -78,7 +78,7 @@
 
   const CAMPAIGN_LEVEL_COUNT = 30;
   const DEFAULT_SETTINGS = { difficulty: "hard", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 2400, mysteryCount: 48, fixedCount: 3 };
-  const BOARD_GENERATION_VERSION = 3;
+  const BOARD_GENERATION_VERSION = 4;
   const STORAGE_KEY = "haibao-jump.local.v1";
   const SAVE_SLOT_COUNT = 3;
 
@@ -94,14 +94,14 @@
     }
     if (level <= 15) {
       return { difficulty: "custom", patternCount: 5, capacity: 8, reserveCount: 5,
-        shuffleSteps: 400 + (level - 11) * 85, mysteryCount: 6 + (level - 11) * 2, fixedCount: 1 };
+        shuffleSteps: 400 + (level - 11) * 85, mysteryCount: 6 + (level - 11) * 2, fixedCount: 1, randomMix: true };
     }
     if (level <= 20) {
       return { difficulty: "custom", patternCount: 6, capacity: 10, reserveCount: 6,
-        shuffleSteps: 850 + (level - 16) * 80, mysteryCount: 14 + (level - 16) * 2, fixedCount: 2 };
+        shuffleSteps: 850 + (level - 16) * 80, mysteryCount: 14 + (level - 16) * 2, fixedCount: 2, randomMix: true };
     }
     return { difficulty: "custom", patternCount: 7, capacity: 12, reserveCount: 8,
-      shuffleSteps: 1250 + (level - 21) * 100, mysteryCount: Math.min(48, 20 + (level - 21) * 2), fixedCount: 3 };
+      shuffleSteps: 1250 + (level - 21) * 100, mysteryCount: Math.min(48, 20 + (level - 21) * 2), fixedCount: 3, randomMix: true };
   }
   const ui = {
     themeSelect: document.getElementById("themeSelect"),
@@ -358,6 +358,7 @@
       reserveCount: bounded(source.reserveCount, DEFAULT_SETTINGS.reserveCount, 0, 8),
       shuffleSteps: bounded(source.shuffleSteps, DEFAULT_SETTINGS.shuffleSteps, 10, 2400),
       mysteryCount: bounded(source.mysteryCount, DEFAULT_SETTINGS.mysteryCount, 0, 48),
+      randomMix: source.randomMix === true && difficulty === "custom" && patternCount >= 5 && capacity >= 8,
       fixedCount: bounded(source.fixedCount, DEFAULT_SETTINGS.fixedCount, 0, Math.min(3, capacity - 1, patternCount))
     };
   }
@@ -446,8 +447,10 @@
     let migratedBlankLayout = false;
     let regeneratedBoard = false;
     const unplayedBoard = moveCount === 0 && JSON.stringify(snapshotBoard) === JSON.stringify(initialBoard);
+    if (unplayedBoard && snapshotCampaignMode && campaignSettingsForLevel(source.campaignLevel).randomMix) snapshotSettings.randomMix = true;
     const shouldRegenerate = unplayedBoard && (hasLegacyGuessCells(source.board) ||
-      (snapshotSettings.difficulty === "hard" && sourceGenerationVersion < BOARD_GENERATION_VERSION));
+      (snapshotSettings.difficulty === "hard" && sourceGenerationVersion < 3) ||
+      (snapshotSettings.randomMix && sourceGenerationVersion < BOARD_GENERATION_VERSION));
     if (shouldRegenerate) {
       snapshotBoard = buildSolvableBoard(snapshotSettings, snapshotDailyMode ? dateSeed(snapshotDailyDate) : undefined);
       initialBoard = cloneBoard(snapshotBoard);
@@ -984,7 +987,7 @@
       let generatedBoard;
       if (typeof Worker === "function" && window.location.protocol !== "file:") {
         generatedBoard = await new Promise(function (resolve, reject) {
-          generationWorker = new Worker(new URL("level-worker.js?v=20261013-3", document.baseURI));
+          generationWorker = new Worker(new URL("level-worker.js?v=20261013-4", document.baseURI));
           generationWorker.onmessage = function (event) {
             const result = event.data;
             if (result.type === "progress") showProgress(result.progress, result.phase);
@@ -1388,7 +1391,7 @@
     const newGameLabel = dailyMode ? "重开今日" : campaignMode ? "重开本关" : "新的一局";
     if (ui.newGameButtonText.textContent !== newGameLabel) ui.newGameButtonText.textContent = newGameLabel;
     ui.boardCaption.textContent = "每列最多 " + settings.capacity + " 格 · " +
-      (settings.difficulty === "hard" ? "随机混排 · " + settings.mysteryCount + " 个隐藏图案" : settings.shuffleSteps + " 步打乱") +
+      (settings.difficulty === "hard" || settings.randomMix ? "随机混排 · " + settings.mysteryCount + " 个隐藏图案" : settings.shuffleSteps + " 步打乱") +
       (settings.fixedCount ? " · 白格可能出现在同一列" : "");
     ui.cancelSelectionButton.hidden = !selected || isAnimating;
     ui.victoryBanner.hidden = isAnimating || !isVictory();
@@ -1858,7 +1861,8 @@
   async function setNewGame(message, nextGame) {
     if (isAnimating) return;
     if (typeof message !== "string") message = "";
-    const nextContext = Object.assign({ settings: settings, campaignMode: campaignMode, dailyMode: dailyMode,
+    const nextContext = Object.assign({ settings: campaignMode ? campaignSettingsForLevel(campaignLevel) : settings,
+      campaignMode: campaignMode, dailyMode: dailyMode,
       dailyChallengeDate: dailyMode ? localDateKey() : "" }, nextGame || {});
     const newBoard = await buildSolvableBoardWithProgress(nextContext.settings,
       nextContext.dailyMode ? dateSeed(nextContext.dailyChallengeDate) : undefined);
