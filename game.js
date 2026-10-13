@@ -684,15 +684,17 @@
 
   async function startCampaignLevel(level) {
     if (isAnimating) return;
+    const nextLevel = Math.max(1, Math.min(campaignUnlockedLevel, CAMPAIGN_LEVEL_COUNT, Number.parseInt(level, 10) || 1));
+    const nextSettings = campaignSettingsForLevel(nextLevel);
+    closeCampaignDialog();
+    const newBoard = await buildSolvableBoardWithProgress(nextSettings);
+    if (!newBoard) return;
     campaignMode = true;
     dailyMode = false;
     dailyChallengeDate = "";
-    campaignLevel = Math.max(1, Math.min(campaignUnlockedLevel, CAMPAIGN_LEVEL_COUNT, Number.parseInt(level, 10) || 1));
-    settings = campaignSettingsForLevel(campaignLevel);
-    closeCampaignDialog();
+    campaignLevel = nextLevel;
+    settings = nextSettings;
     setFormValues(settings);
-    const newBoard = await buildSolvableBoardWithProgress(settings);
-    if (!newBoard) return;
     selected = null;
     moveCount = 0;
     moveHistory = [];
@@ -708,14 +710,16 @@
 
   async function startDailyChallenge(dateKey) {
     if (isAnimating) return;
-    dailyChallengeDate = isValidDateKey(dateKey) ? dateKey : localDateKey();
+    const nextDate = isValidDateKey(dateKey) ? dateKey : localDateKey();
+    const nextSettings = selectedPresetSettings("hard");
+    closeCampaignDialog();
+    const newBoard = await buildSolvableBoardWithProgress(nextSettings, dateSeed(nextDate));
+    if (!newBoard) return;
+    dailyChallengeDate = nextDate;
     dailyMode = true;
     campaignMode = false;
-    settings = selectedPresetSettings("hard");
-    closeCampaignDialog();
+    settings = nextSettings;
     setFormValues(settings);
-    const newBoard = await buildSolvableBoardWithProgress(settings, dateSeed(dailyChallengeDate));
-    if (!newBoard) return;
     selected = null;
     moveCount = 0;
     moveHistory = [];
@@ -756,10 +760,11 @@
   }
 
   async function createGameInSlot(index) {
+    if (isAnimating) return;
     closeSaveDialog();
-    activeSaveId = index;
     const newBoard = await buildSolvableBoardWithProgress(settings, dailyMode ? dateSeed(dailyChallengeDate) : undefined);
     if (!newBoard) return;
+    activeSaveId = index;
     selected = null;
     moveCount = 0;
     moveHistory = [];
@@ -987,6 +992,7 @@
             else if (result.type === "error") reject(new Error(result.message));
           };
           generationWorker.onerror = function () { reject(new Error("棋盘生成线程未能启动")); };
+          generationWorker.onmessageerror = function () { reject(new Error("棋盘生成结果无法读取")); };
           generationWorker.postMessage({ settings: currentSettings, seed: seed });
         });
       } else {
@@ -1849,12 +1855,19 @@
     }
   }
 
-  async function setNewGame(message) {
+  async function setNewGame(message, nextGame) {
     if (isAnimating) return;
     if (typeof message !== "string") message = "";
-    if (dailyMode) dailyChallengeDate = localDateKey();
-    const newBoard = await buildSolvableBoardWithProgress(settings, dailyMode ? dateSeed(dailyChallengeDate) : undefined);
+    const nextContext = Object.assign({ settings: settings, campaignMode: campaignMode, dailyMode: dailyMode,
+      dailyChallengeDate: dailyMode ? localDateKey() : "" }, nextGame || {});
+    const newBoard = await buildSolvableBoardWithProgress(nextContext.settings,
+      nextContext.dailyMode ? dateSeed(nextContext.dailyChallengeDate) : undefined);
     if (!newBoard) return;
+    settings = nextContext.settings;
+    campaignMode = nextContext.campaignMode;
+    dailyMode = nextContext.dailyMode;
+    dailyChallengeDate = nextContext.dailyChallengeDate;
+    setFormValues(settings);
     selected = null;
     moveCount = 0;
     moveHistory = [];
@@ -2126,12 +2139,9 @@
   ui.cancelSettingsButton.addEventListener("click", closeSettings);
   ui.applySettingsButton.addEventListener("click", function () {
     if (isAnimating) return;
-    settings = readSettingsForm();
-    campaignMode = false;
-    dailyMode = false;
-    dailyChallengeDate = "";
+    const nextSettings = readSettingsForm();
     closeSettings();
-    setNewGame();
+    setNewGame("", { settings: nextSettings, campaignMode: false, dailyMode: false, dailyChallengeDate: "" });
   });
   ui.difficultySelect.addEventListener("change", function () {
     if (PRESETS[ui.difficultySelect.value]) {
@@ -2168,10 +2178,7 @@
   ui.restartButton.addEventListener("click", restartGame);
   ui.shuffleButton.addEventListener("click", function () {
     if (dailyMode) {
-      dailyMode = false;
-      dailyChallengeDate = "";
-      campaignMode = false;
-      setNewGame("已离开每日挑战，开始自由随机局。");
+      setNewGame("已离开每日挑战，开始自由随机局。", { dailyMode: false, dailyChallengeDate: "", campaignMode: false });
       return;
     }
     setNewGame("棋盘已重新打乱，新的挑战开始啦。");
