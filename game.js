@@ -73,11 +73,12 @@
   const PRESETS = {
     easy: { label: "简单", patternCount: 3, capacity: 4, reserveCount: 4, shuffleSteps: 20, mysteryCount: 0, fixedCount: 0 },
     normal: { label: "普通", patternCount: 4, capacity: 4, reserveCount: 2, shuffleSteps: 45, mysteryCount: 4, fixedCount: 1 },
-    hard: { label: "困难", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 1800, mysteryCount: 40, fixedCount: 3 }
+    hard: { label: "困难", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 2400, mysteryCount: 48, fixedCount: 3 }
   };
 
   const CAMPAIGN_LEVEL_COUNT = 30;
-  const DEFAULT_SETTINGS = { difficulty: "hard", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 1800, mysteryCount: 40, fixedCount: 3 };
+  const DEFAULT_SETTINGS = { difficulty: "hard", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 2400, mysteryCount: 48, fixedCount: 3 };
+  const BOARD_GENERATION_VERSION = 2;
   const STORAGE_KEY = "haibao-jump.local.v1";
   const SAVE_SLOT_COUNT = 3;
 
@@ -446,12 +447,18 @@
     const snapshotInitial = normalizeBoard(source.initialBoard, snapshotSettings);
     if (!snapshotBoard) return null;
     const moveCount = Math.max(0, Math.min(999999, Number.parseInt(source.moveCount, 10) || 0));
+    const sourceGenerationVersion = Number.parseInt(source.boardGenerationVersion, 10) || 0;
     let initialBoard = snapshotInitial || cloneBoard(snapshotBoard);
     let migratedBlankLayout = false;
-    if (moveCount === 0 && JSON.stringify(snapshotBoard) === JSON.stringify(initialBoard) && hasLegacyGuessCells(source.board)) {
+    let regeneratedBoard = false;
+    const unplayedBoard = moveCount === 0 && JSON.stringify(snapshotBoard) === JSON.stringify(initialBoard);
+    const shouldRegenerate = unplayedBoard && (hasLegacyGuessCells(source.board) ||
+      (snapshotSettings.difficulty === "hard" && sourceGenerationVersion < BOARD_GENERATION_VERSION));
+    if (shouldRegenerate) {
       snapshotBoard = buildSolvableBoard(snapshotSettings, snapshotDailyMode ? dateSeed(snapshotDailyDate) : undefined);
       initialBoard = cloneBoard(snapshotBoard);
-      migratedBlankLayout = true;
+      migratedBlankLayout = hasLegacyGuessCells(source.board);
+      regeneratedBoard = true;
     }
     migratedBlankLayout = migrateMissingBlankTiles(snapshotBoard, initialBoard, snapshotSettings) || migratedBlankLayout;
     return {
@@ -464,7 +471,9 @@
       campaignLevel: Math.max(1, Math.min(CAMPAIGN_LEVEL_COUNT, Number.parseInt(source.campaignLevel, 10) || 1)),
       dailyMode: snapshotDailyMode,
       dailyChallengeDate: snapshotDailyDate,
+      boardGenerationVersion: BOARD_GENERATION_VERSION,
       migratedBlankLayout: migratedBlankLayout,
+      regeneratedBoard: regeneratedBoard,
       savedAt: Number(source.savedAt) || Date.now()
     };
   }
@@ -480,6 +489,7 @@
       campaignLevel: campaignLevel,
       dailyMode: dailyMode,
       dailyChallengeDate: dailyChallengeDate,
+      boardGenerationVersion: BOARD_GENERATION_VERSION,
       savedAt: Date.now()
     };
   }
@@ -520,7 +530,8 @@
     saveSlots = Array.from({ length: SAVE_SLOT_COUNT }, function (_, index) {
       return normalizeSnapshot(Array.isArray(stored.saveSlots) ? stored.saveSlots[index] : null);
     });
-    const activeLayoutMigrated = Boolean(saveSlots[activeSaveId] && saveSlots[activeSaveId].migratedBlankLayout);
+    const activeLayoutMigrated = Boolean(saveSlots[activeSaveId] &&
+      (saveSlots[activeSaveId].migratedBlankLayout || saveSlots[activeSaveId].regeneratedBoard));
     const restored = Boolean(saveSlots[activeSaveId] && restoreSnapshot(saveSlots[activeSaveId]));
     if (restored && activeLayoutMigrated) persistLocalData(true);
     return restored;
@@ -542,6 +553,7 @@
         if (!snapshot) return null;
         const storedSnapshot = Object.assign({}, snapshot);
         delete storedSnapshot.migratedBlankLayout;
+        delete storedSnapshot.regeneratedBoard;
         return storedSnapshot;
       })
     };
@@ -921,16 +933,21 @@
     let largestRun = 0;
     let largestTopGroup = 0;
     let solvedColumns = 0;
-    const repeatedRuns = { 2: 0, 3: 0, 4: 0 };
+    const repeatedRuns = { 2: 0 };
+    let patternRunCount = 0;
     columns.forEach(function (column) {
       if (!column.length) return;
       largestTopGroup = Math.max(largestTopGroup, topGroupSize(column));
       const colors = new Set();
       let previousPattern = null;
       let runLength = 0;
-      let runCount = 0;
+      let columnRunCount = 0;
       function scoreRun(length) {
-        if (length >= 2 && length <= 4) repeatedRuns[length] += 1;
+        if (length > 0) {
+          patternRunCount += 1;
+          columnRunCount += 1;
+        }
+        if (length === 2) repeatedRuns[2] += 1;
       }
       column.forEach(function (token) {
         if (isBlankToken(token)) {
@@ -947,25 +964,24 @@
           scoreRun(runLength);
           previousPattern = patternId;
           runLength = 1;
-          runCount += 1;
         }
         largestRun = Math.max(largestRun, runLength);
       });
       scoreRun(runLength);
       if (colors.size > 1) score += colors.size * 15;
-      score += runCount * 3;
+      score += columnRunCount * 3;
       if (columnIsSortedForCapacity(column, capacity)) solvedColumns += 1;
     });
     const topGroupPenalty = Math.max(0, largestTopGroup - 1) ** 2 * 8;
-    const repeatedRunCount = repeatedRuns[2] + repeatedRuns[3] + repeatedRuns[4];
-    const runProfilePenalty = repeatedRunCount
-      ? (Math.abs(repeatedRuns[2] / repeatedRunCount - 0.85) +
-        Math.abs(repeatedRuns[3] / repeatedRunCount - 0.12) +
-        Math.abs(repeatedRuns[4] / repeatedRunCount - 0.03)) * 160
-      : 160;
+    const pairRate = patternRunCount ? repeatedRuns[2] / patternRunCount : 0;
+    const pairRatePenalty = Math.abs(pairRate - 0.05);
     return {
-      score: score - largestRun * 6 - runProfilePenalty - topGroupPenalty - solvedColumns * 60,
-      largestRun: largestRun
+      score: score - topGroupPenalty - solvedColumns * 60,
+      largestRun: largestRun,
+      pairCount: repeatedRuns[2],
+      runCount: patternRunCount,
+      pairRate: pairRate,
+      pairRatePenalty: pairRatePenalty
     };
   }
 
@@ -979,14 +995,15 @@
     const blankPatternCount = fixedCount === 0 ? 0 : fixedCount === 1 ? 1 :
       fixedCount === 2 ? (blankDistributionRoll < 65 ? 1 : 2) :
         (blankDistributionRoll < 40 ? 1 : blankDistributionRoll < 80 ? 2 : 3);
-    // Compare several solvable reverse walks and prefer an 85/12/3 mix of
-    // repeated groups of two, three, and four matching tiles.
+    // Compare multiple reverse walks, keep their solvable path, and prefer
+    // sparse doubles. Hard boards never retain a run longer than two.
     const isHardMode = currentSettings.difficulty === "hard";
-    const attemptCount = isHardMode ? 10 : 1;
+    const attemptCount = isHardMode ? 24 : 1;
     const reverseLookback = Math.min(16, Math.max(10, currentSettings.patternCount * 2));
     let bestColumns = null;
     let bestReverseSteps = -1;
     let bestQuality = -Infinity;
+    let bestPairRatePenalty = Infinity;
 
     for (let attempt = 0; attempt < attemptCount || (isHardMode && !bestColumns); attempt += 1) {
       const availablePatterns = [];
@@ -1022,6 +1039,13 @@
       const reserve = Array(currentSettings.reserveCount).fill(null);
 
       const recentReverseMoves = [];
+      const blockedReverseMoveKeys = new Set();
+      function reverseMoveKey(move) {
+        return move.targetKind + ":" + move.targetIndex + ">" + move.sourceKind + ":" + move.sourceIndex + ":" + move.patternId;
+      }
+      function moveKey(move) {
+        return move.sourceKind + ":" + move.sourceIndex + ">" + move.targetKind + ":" + move.targetIndex + ":" + move.patternId;
+      }
       let completedReverseSteps = 0;
       for (let step = 0; step < currentSettings.shuffleSteps; step += 1) {
         const candidates = [];
@@ -1034,8 +1058,11 @@
           for (let targetIndex = 0; targetIndex < columns.length; targetIndex += 1) {
             if (targetIndex === donorIndex) continue;
             const target = columns[targetIndex];
-            // Keep the reverse path invertible and split same-pattern runs into smaller groups.
-            if (target.length && actualPatternId(target[target.length - 1]) === patternId) continue;
+            const targetTopPattern = target.length ? actualPatternId(target[target.length - 1]) : null;
+            const targetGroupSize = targetTopPattern === patternId ? topGroupSize(target) : 0;
+            // Allow a rare pair, but never build a triple into the starting board.
+            if ((isHardMode && targetGroupSize >= 2) ||
+                (!isHardMode && targetTopPattern === patternId)) continue;
             if (target.length >= currentSettings.capacity) continue;
             // A column that becomes complete during reverse scrambling would be locked
             // before the earlier reverse moves could be undone in normal play.
@@ -1043,7 +1070,8 @@
             candidates.push({
               sourceKind: "column", sourceIndex: donorIndex,
               targetKind: "column", targetIndex: targetIndex,
-              patternId: patternId
+              patternId: patternId,
+              joinsGroup: targetGroupSize === 1
             });
           }
 
@@ -1054,7 +1082,8 @@
             candidates.push({
               sourceKind: "column", sourceIndex: donorIndex,
               targetKind: "reserve", targetIndex: reserveIndex,
-              patternId: patternId
+              patternId: patternId,
+              joinsGroup: false
             });
           }
         }
@@ -1067,30 +1096,38 @@
           if (!patternId) continue;
           for (let targetIndex = 0; targetIndex < columns.length; targetIndex += 1) {
             const target = columns[targetIndex];
+            const targetTopPattern = target.length ? actualPatternId(target[target.length - 1]) : null;
+            const targetGroupSize = targetTopPattern === patternId ? topGroupSize(target) : 0;
+            if (isHardMode && targetGroupSize >= 2) continue;
             if (columnIsSortedForCapacity(target, currentSettings.capacity)) continue;
             if (target.length >= currentSettings.capacity) continue;
             if (wouldCompleteColumnAfterAdding(target, patternId, currentSettings.capacity)) continue;
             candidates.push({
               sourceKind: "reserve", sourceIndex: reserveIndex,
               targetKind: "column", targetIndex: targetIndex,
-              patternId: patternId
+              patternId: patternId,
+              joinsGroup: targetGroupSize === 1
             });
           }
         }
 
         const choices = candidates.filter(function (candidate) {
-          return !recentReverseMoves.some(function (previousMove) {
-            return candidate.sourceKind === previousMove.targetKind &&
-              candidate.sourceIndex === previousMove.targetIndex &&
-              candidate.targetKind === previousMove.sourceKind &&
-              candidate.targetIndex === previousMove.sourceIndex &&
-              candidate.patternId === previousMove.patternId;
-          });
+          return !blockedReverseMoveKeys.has(moveKey(candidate));
         });
         const availableChoices = choices.length ? choices : candidates;
         if (!availableChoices.length) break;
 
-        const chosen = availableChoices[pickIndex(availableChoices.length)];
+        const pairChoices = availableChoices.filter(function (candidate) { return candidate.joinsGroup; });
+        const nonPairChoices = availableChoices.filter(function (candidate) { return !candidate.joinsGroup; });
+        let chosen;
+        if (isHardMode && pairChoices.length && nonPairChoices.length) {
+          // Only about one in twenty reverse placements should create a pair.
+          const allowPair = pickIndex(100) < 5;
+          const preferredChoices = allowPair ? pairChoices : nonPairChoices;
+          chosen = preferredChoices[pickIndex(preferredChoices.length)];
+        } else {
+          chosen = availableChoices[pickIndex(availableChoices.length)];
+        }
         const token = chosen.sourceKind === "column"
           ? columns[chosen.sourceIndex].pop()
           : reserve[chosen.sourceIndex];
@@ -1098,7 +1135,10 @@
         if (chosen.targetKind === "column") columns[chosen.targetIndex].push(token);
         else reserve[chosen.targetIndex] = token;
         recentReverseMoves.push(chosen);
-        if (recentReverseMoves.length > reverseLookback) recentReverseMoves.shift();
+        blockedReverseMoveKeys.add(reverseMoveKey(chosen));
+        if (recentReverseMoves.length > reverseLookback) {
+          blockedReverseMoveKeys.delete(reverseMoveKey(recentReverseMoves.shift()));
+        }
         completedReverseSteps += 1;
       }
       const randomWalkSteps = completedReverseSteps;
@@ -1113,6 +1153,9 @@
           if (!patternId) continue;
           for (let targetIndex = 0; targetIndex < columns.length; targetIndex += 1) {
             const target = columns[targetIndex];
+            const targetTopPattern = target.length ? actualPatternId(target[target.length - 1]) : null;
+            const targetGroupSize = targetTopPattern === patternId ? topGroupSize(target) : 0;
+            if (isHardMode && targetGroupSize >= 2) continue;
             if (columnIsSortedForCapacity(target, currentSettings.capacity)) continue;
             if (target.length >= currentSettings.capacity) continue;
             if (wouldCompleteColumnAfterAdding(target, patternId, currentSettings.capacity)) continue;
@@ -1125,11 +1168,14 @@
           const target = columns[candidate.targetIndex];
           const topPattern = target.length ? actualPatternId(target[target.length - 1]) : null;
           const joinsGroup = topPattern === candidate.patternId;
-          const groupSize = joinsGroup ? topGroupSize(target) : 0;
-          return { candidate: candidate, score: joinsGroup ? 12 + groupSize * groupSize : 0 };
+          return { candidate: candidate, joinsGroup: joinsGroup };
         });
-        const lowestScore = Math.min.apply(null, scoredReleases.map(function (item) { return item.score; }));
-        const bestReleases = scoredReleases.filter(function (item) { return item.score === lowestScore; });
+        const nonPairReleases = scoredReleases.filter(function (item) { return !item.joinsGroup; });
+        const pairReleases = scoredReleases.filter(function (item) { return item.joinsGroup; });
+        let bestReleases = nonPairReleases.length ? nonPairReleases : pairReleases;
+        if (isHardMode && nonPairReleases.length && pairReleases.length && pickIndex(100) < 5) {
+          bestReleases = pairReleases;
+        }
         const chosenRelease = bestReleases[pickIndex(bestReleases.length)].candidate;
         const token = reserve[chosenRelease.reserveIndex];
         reserve[chosenRelease.reserveIndex] = null;
@@ -1155,13 +1201,15 @@
       }
 
       const quality = scrambleQuality(columns, currentSettings.capacity);
-      // Allow an occasional four-run, but never start a hard board with five
-      // or more connected matching patterns. Hidden tiles use their real IDs.
-      if (isHardMode && quality.largestRun > 4) continue;
+      // Source game tiles are scored before mystery faces are added.
+      if (isHardMode && quality.largestRun > 2) continue;
       if (randomWalkSteps > bestReverseSteps ||
-          (randomWalkSteps === bestReverseSteps && quality.score > bestQuality)) {
+          (randomWalkSteps === bestReverseSteps &&
+            (quality.pairRatePenalty < bestPairRatePenalty ||
+              (quality.pairRatePenalty === bestPairRatePenalty && quality.score > bestQuality)))) {
         bestReverseSteps = randomWalkSteps;
         bestQuality = quality.score;
+        bestPairRatePenalty = quality.pairRatePenalty;
         bestColumns = columns;
       }
     }
