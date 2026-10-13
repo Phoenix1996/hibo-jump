@@ -78,7 +78,7 @@
 
   const CAMPAIGN_LEVEL_COUNT = 30;
   const DEFAULT_SETTINGS = { difficulty: "hard", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 2400, mysteryCount: 48, fixedCount: 3 };
-  const BOARD_GENERATION_VERSION = 2;
+  const BOARD_GENERATION_VERSION = 3;
   const STORAGE_KEY = "haibao-jump.local.v1";
   const SAVE_SLOT_COUNT = 3;
 
@@ -848,7 +848,7 @@
     }
   }
 
-  function playSound(kind, variant) {
+  function playSound(kind, variant, sequenceIndex) {
     if (!soundEnabled) return;
     const context = prepareAudioContext();
     if (!context) return;
@@ -857,11 +857,14 @@
       const tileIndex = kind === "tile"
         ? Math.max(0, getTheme().patterns.findIndex(function (pattern) { return pattern.id === actualPatternId(variant); }))
         : 0;
+      const pitchSteps = [0, 2, 4, 5, 7, 9, 11, 12];
+      const tileFrequency = tileNotes[tileIndex % tileNotes.length] *
+        Math.pow(2, pitchSteps[Math.min(pitchSteps.length - 1, Math.max(0, sequenceIndex || 0))] / 12);
       const notes = kind === "win" ? [523.25, 659.25, 783.99, 1046.5] :
         kind === "wrong" ? [246.94, 196] :
         kind === "stash" ? [493.88] :
         kind === "reveal" ? [587.33, 783.99] :
-        kind === "tile" ? [tileNotes[tileIndex % tileNotes.length]] : [659.25];
+        kind === "tile" ? [tileFrequency] : [659.25];
       const peakVolume = kind === "win" ? 0.055 : kind === "tile" ? 0.018 : 0.035;
       const noteLength = kind === "win" ? 0.28 : kind === "tile" ? 0.085 : 0.16;
       notes.forEach(function (frequency, index) {
@@ -883,10 +886,10 @@
     }
   }
 
-  function vibrateOnLanding() {
+  function vibrateOnLanding(shortPulse) {
     if (!vibrationEnabled || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
     try {
-      const accepted = navigator.vibrate([32, 18, 42]);
+      const accepted = navigator.vibrate(shortPulse ? 12 : [32, 18, 42]);
       if (!accepted) ui.vibrationHint.textContent = "设备未接受震动请求，请检查系统设置";
     } catch (error) {
       ui.vibrationHint.textContent = "设备未接受震动请求，请检查系统设置";
@@ -1083,6 +1086,9 @@
   }
 
   function* generateSolvableBoardSteps(currentSettings, seed) {
+    if (currentSettings.difficulty === "hard") {
+      return yield* window.HiboLevels.generate(currentSettings, seed);
+    }
     const randomSource = Number.isInteger(seed) ? createSeededRandom(seed) : Math.random;
     const pickIndex = function (max) { return randomIndex(max, randomSource); };
     const fixedCount = Math.min(currentSettings.fixedCount, currentSettings.capacity - 1, currentSettings.patternCount);
@@ -1401,17 +1407,37 @@
     ui.boardLoadingTrack.setAttribute("aria-valuenow", "0");
     ui.boardLoadingLabel.textContent = "正在准备棋盘 · 0%";
     setBoardCreationControlsDisabled(true);
+    let generationWorker = null;
+    function showProgress(progress, phase) {
+      const value = Math.max(0, Math.min(96, progress || 0));
+      ui.boardLoadingProgress.style.width = value + "%";
+      ui.boardLoadingTrack.setAttribute("aria-valuenow", String(value));
+      ui.boardLoadingLabel.textContent = (phase || "正在生成棋盘") + " · " + value + "%";
+    }
     try {
       await new Promise(function (resolve) { window.requestAnimationFrame(resolve); });
-      const generator = generateSolvableBoardSteps(currentSettings, seed);
-      let step = generator.next();
-      while (!step.done) {
-        const progress = Math.max(0, Math.min(96, step.value.progress || 0));
-        ui.boardLoadingProgress.style.width = progress + "%";
-        ui.boardLoadingTrack.setAttribute("aria-valuenow", String(progress));
-        ui.boardLoadingLabel.textContent = "正在生成可解棋盘 · " + progress + "%";
-        await new Promise(function (resolve) { window.requestAnimationFrame(resolve); });
-        step = generator.next();
+      let generatedBoard;
+      if (currentSettings.difficulty === "hard" && typeof Worker === "function" && window.location.protocol !== "file:") {
+        generatedBoard = await new Promise(function (resolve, reject) {
+          generationWorker = new Worker(new URL("level-worker.js?v=20261013-2", document.baseURI));
+          generationWorker.onmessage = function (event) {
+            const result = event.data;
+            if (result.type === "progress") showProgress(result.progress, result.phase);
+            else if (result.type === "complete") resolve(result.board);
+            else if (result.type === "error") reject(new Error(result.message));
+          };
+          generationWorker.onerror = function () { reject(new Error("棋盘生成线程未能启动")); };
+          generationWorker.postMessage({ settings: currentSettings, seed: seed });
+        });
+      } else {
+        const generator = generateSolvableBoardSteps(currentSettings, seed);
+        let step = generator.next();
+        while (!step.done) {
+          showProgress(step.value.progress, step.value.phase);
+          await new Promise(function (resolve) { window.requestAnimationFrame(resolve); });
+          step = generator.next();
+        }
+        generatedBoard = step.value;
       }
 
       ui.boardLoadingProgress.style.width = "100%";
@@ -1419,7 +1445,7 @@
       ui.boardLoadingLabel.textContent = "棋盘准备好了";
       await new Promise(function (resolve) { window.requestAnimationFrame(resolve); });
       ui.boardLoading.hidden = true;
-      return step.value;
+      return generatedBoard;
     } catch (error) {
       ui.boardLoading.hidden = true;
       isAnimating = false;
@@ -1427,6 +1453,8 @@
       render();
       announce("棋盘生成遇到问题，请再试一次。");
       return null;
+    } finally {
+      if (generationWorker) generationWorker.terminate();
     }
   }
 
@@ -1772,7 +1800,9 @@
     ui.shuffleButton.setAttribute("aria-label", dailyMode ? "离开每日挑战并开始随机局" : "重新打乱棋盘");
     const newGameLabel = dailyMode ? "重开今日" : campaignMode ? "重开本关" : "新的一局";
     if (ui.newGameButtonText.textContent !== newGameLabel) ui.newGameButtonText.textContent = newGameLabel;
-    ui.boardCaption.textContent = "每列最多 " + settings.capacity + " 格 · " + settings.shuffleSteps + " 步打乱" + (settings.fixedCount ? " · 白格可能出现在同一列" : "");
+    ui.boardCaption.textContent = "每列最多 " + settings.capacity + " 格 · " +
+      (settings.difficulty === "hard" ? "随机混排 · " + settings.mysteryCount + " 个隐藏图案" : settings.shuffleSteps + " 步打乱") +
+      (settings.fixedCount ? " · 白格可能出现在同一列" : "");
     ui.cancelSelectionButton.hidden = !selected || isAnimating;
     ui.victoryBanner.hidden = isAnimating || !isVictory();
     ui.undoButton.disabled = isAnimating || moveHistory.length === 0;
@@ -1923,15 +1953,6 @@
     return elements;
   }
 
-  function unionRect(rects) {
-    if (!rects.length) return null;
-    const left = Math.min.apply(null, rects.map(function (rect) { return rect.left; }));
-    const top = Math.min.apply(null, rects.map(function (rect) { return rect.top; }));
-    const right = Math.max.apply(null, rects.map(function (rect) { return rect.right; }));
-    const bottom = Math.max.apply(null, rects.map(function (rect) { return rect.bottom; }));
-    return { left: left, top: top, right: right, bottom: bottom, width: right - left, height: bottom - top };
-  }
-
   function sourceElements(move) {
     if (move.source.kind === "reserve") {
       const sourceButton = ui.reserveSlots.querySelector('[data-kind="reserve"][data-index="' + move.source.index + '"]');
@@ -2043,31 +2064,6 @@
     vibrateOnLanding();
     return true;
   }
-  async function animateGroupRevealTile(tile, token, reducedMotion) {
-    if (!tile || !isMysteryToken(token)) return;
-    if (typeof tile.animate === "function") {
-      const close = tile.animate([
-        { transform: "rotateY(0deg) scale(1)", opacity: 1 },
-        { transform: "rotateY(88deg) scale(.9)", opacity: .82 }
-      ], { duration: reducedMotion ? 60 : 85, easing: "ease-in", fill: "forwards" });
-      await close.finished.catch(function () {});
-    }
-    const pattern = getPattern(actualPatternId(token));
-    tile.classList.remove("mystery-hidden");
-    if (pattern.image) tile.classList.add("has-art");
-    tile.style.setProperty("--pattern-color", pattern.color);
-    tile.innerHTML = patternVisualHtml(pattern);
-    const image = tile.querySelector("img");
-    if (image && typeof image.decode === "function") await image.decode().catch(function () {});
-    if (typeof tile.animate === "function") {
-      const open = tile.animate([
-        { transform: "rotateY(-88deg) scale(.9)", opacity: .82 },
-        { transform: "rotateY(0deg) scale(1)", opacity: 1 }
-      ], { duration: reducedMotion ? 60 : 85, easing: "cubic-bezier(.2,.8,.25,1)", fill: "forwards" });
-      await open.finished.catch(function () {});
-    }
-  }
-
   async function animateSourceReveal(cell, reducedMotion) {
     if (!cell || typeof cell.animate !== "function") return;
     const animation = cell.animate([
@@ -2079,98 +2075,89 @@
 
   async function animateGroupMove(move) {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const sourceIndex = move.source.index;
-    const targetIndex = move.target.index;
-    const sourceColumn = board.columns[sourceIndex];
-    const targetColumn = board.columns[targetIndex];
+    const sourceColumn = board.columns[move.source.index];
+    const targetColumn = board.columns[move.target.index];
     const sourceStart = sourceColumn.length - move.count;
     const targetStart = targetColumn.length;
-    const sourceCells = elementsForColumnLevels(sourceIndex, sourceStart, move.count);
-    const sourceRects = sourceCells.map(function (cell) { return cell.getBoundingClientRect(); });
-    if (sourceCells.length !== move.count) return false;
-    const sourceBounds = unionRect(sourceRects);
-    if (!sourceBounds) return false;
-    const targetCells = elementsForColumnLevels(targetIndex, targetStart, move.count);
-    if (targetCells.length !== move.count) return false;
-    const targetBounds = unionRect(targetCells.map(function (cell) { return cell.getBoundingClientRect(); }));
-    if (!targetBounds) return false;
+    const sourceCells = elementsForColumnLevels(move.source.index, sourceStart, move.count);
+    const targetCells = elementsForColumnLevels(move.target.index, targetStart, move.count);
+    if (sourceCells.length !== move.count || targetCells.length !== move.count) return false;
+    const sourceRects = sourceCells.map(cell => cell.getBoundingClientRect());
+    const targetRects = targetCells.map(cell => cell.getBoundingClientRect());
+    const sourceRim = sourceCells[0].closest(".column-stack").getBoundingClientRect().top;
+    const targetRim = targetCells[0].closest(".column-stack").getBoundingClientRect().top;
     const tokens = sourceColumn.slice(sourceStart);
-    const newlyExposedLevel = sourceStart - 1;
-    const revealSource = newlyExposedLevel >= 0 && isMysteryToken(sourceColumn[newlyExposedLevel]);
-
-    sourceCells.forEach(function (cell) { cell.classList.add("is-flight-source"); });
-    const group = document.createElement("div");
-    group.className = "flight-group";
-    group.setAttribute("aria-hidden", "true");
-    group.style.left = sourceBounds.left + "px";
-    group.style.top = sourceBounds.top + "px";
-    group.style.width = sourceBounds.width + "px";
-    group.style.height = sourceBounds.height + "px";
-    ui.flightLayer.appendChild(group);
-    const flightTiles = tokens.map(function (token, index) {
-      return createFlightTile(token, sourceRects[index], group, sourceBounds, sourceCells[index]);
+    const revealedMystery = sourceStart > 0 && isMysteryToken(sourceColumn[sourceStart - 1]);
+    const flights = sourceCells.map(function (cell, index) {
+      const flight = createFlightTile(tokens[index], sourceRects[index], null, null, cell);
+      flight.style.visibility = "hidden";
+      return flight;
     });
-
-    const flightImages = flightTiles.map(function (tile) { return tile.querySelector("img"); }).filter(Boolean);
-    flightImages.forEach(function (image) { image.loading = "eager"; });
-    await Promise.all(flightImages.map(function (image) {
+    await Promise.all(flights.map(function (flight) {
+      const image = flight.querySelector("img");
+      if (!image) return Promise.resolve();
+      image.loading = "eager";
       return typeof image.decode === "function" ? image.decode().catch(function () {}) : Promise.resolve();
     }));
 
-    const flightPromise = (function () {
-      if (typeof group.animate === "function") {
-        const animation = group.animate(
-          reducedMotion
-            ? [{ transform: "translate3d(0,0,0)" }, {
-              transform: "translate3d(" + (targetBounds.left - sourceBounds.left) + "px," +
-                (targetBounds.top - sourceBounds.top) + "px,0)"
-            }]
-            : flightKeyframes(sourceBounds, targetBounds),
-          {
-            duration: flightDuration(sourceBounds, targetBounds, reducedMotion),
-            easing: reducedMotion ? "ease-out" : "cubic-bezier(.18,.78,.22,1)",
-            fill: "forwards"
-          }
-        );
-        return animation.finished.catch(function () {});
+    const stagger = reducedMotion ? 0 : Math.max(22, 36 - move.count * 1.1);
+    const horizontalDistance = Math.abs(targetRects[0].left - sourceRects[0].left);
+    const duration = reducedMotion ? 90 : Math.min(320, 250 + horizontalDistance * 0.07);
+    await Promise.all(flights.map(async function (_, order) {
+      // The highest source tile departs first and occupies the lowest new slot.
+      const sourceOffset = move.count - 1 - order;
+      const flight = flights[sourceOffset];
+      const sourceRect = sourceRects[sourceOffset];
+      const targetRect = centeredFlightRect(sourceRect, targetRects[order]);
+      if (order && stagger) await new Promise(resolve => window.setTimeout(resolve, order * stagger));
+      sourceCells[sourceOffset].classList.add("is-flight-source");
+      flight.style.visibility = "visible";
+      const dx = targetRect.left - sourceRect.left;
+      const dy = targetRect.top - sourceRect.top;
+      const lift = sourceRect.height * 0.72 + 6;
+      const exitY = sourceRim - sourceRect.top - lift;
+      const entryY = targetRim - sourceRect.top - lift;
+      const bridgeY = Math.min(exitY, entryY) - 12;
+      const frames = reducedMotion ? [
+        { transform: "translate3d(0,0,0)" },
+        { transform: "translate3d(" + dx + "px," + dy + "px,0)" }
+      ] : [
+        { transform: "translate3d(0,0,0) scale(1)", offset: 0 },
+        { transform: "translate3d(0," + exitY + "px,0) scale(1.03)", offset: 0.23 },
+        { transform: "translate3d(" + dx + "px," + bridgeY + "px,0) scale(1.04)", offset: 0.59 },
+        { transform: "translate3d(" + dx + "px," + entryY + "px,0) scale(1.02)", offset: 0.70 },
+        { transform: "translate3d(" + dx + "px," + (dy + 2) + "px,0) scale(1.035,.96)", offset: 0.92 },
+        { transform: "translate3d(" + dx + "px," + dy + "px,0) scale(1)", offset: 1 }
+      ];
+      if (typeof flight.animate === "function") {
+        const animation = flight.animate(frames, { duration: duration, easing: "linear", fill: "forwards" });
+        await animation.finished.catch(function () {});
+      } else {
+        await animateFlightTile(flight, sourceRect, targetRect, reducedMotion);
       }
-      const deltaX = targetBounds.left - sourceBounds.left;
-      const deltaY = targetBounds.top - sourceBounds.top;
-      const duration = flightDuration(sourceBounds, targetBounds, reducedMotion);
-      group.style.transition = "transform " + duration + "ms cubic-bezier(.18,.78,.22,1)";
-      return new Promise(function (resolve) {
-        window.requestAnimationFrame(function () {
-          group.style.transform = "translate3d(" + deltaX + "px," + deltaY + "px,0)";
-          window.setTimeout(resolve, duration);
-        });
-      });
-    })();
-    const revealPromises = flightTiles.map(function (tile, index) {
-      return animateGroupRevealTile(tile, tokens[index], reducedMotion);
-    });
-    await Promise.all([flightPromise].concat(revealPromises));
+      await revealFlightTile(flight, tokens[sourceOffset], sourceRect, targetRect, reducedMotion);
+      playSound("tile", tokens[sourceOffset], order);
+      vibrateOnLanding(true);
+    }));
 
+    // Commit once all flights have landed; keep overlays visible until decoded
+    // destination images replace them in the same paint.
     sourceColumn.splice(sourceStart, move.count);
     targetColumn.push.apply(targetColumn, tokens.map(actualPatternId));
     revealTopToken(sourceColumn);
     render();
-    targetCells.forEach(function (cell) { cell.classList.add("is-flying"); });
-    const revealCell = revealSource ? elementsForColumnLevels(sourceIndex, newlyExposedLevel, 1)[0] : null;
-    const destinationImages = targetCells.concat(revealCell ? [revealCell] : [])
-      .map(function (element) { return element && element.querySelector("img"); })
-      .filter(Boolean);
-    destinationImages.forEach(function (image) { image.loading = "eager"; });
-    await Promise.all(destinationImages.map(function (image) {
+    targetCells.forEach(cell => cell.classList.add("is-flying"));
+    const revealCell = revealedMystery ? elementsForColumnLevels(move.source.index, sourceStart - 1, 1)[0] : null;
+    await Promise.all(targetCells.concat(revealCell ? [revealCell] : []).map(function (cell) {
+      const image = cell.querySelector("img");
+      if (!image) return Promise.resolve();
+      image.loading = "eager";
       return typeof image.decode === "function" ? image.decode().catch(function () {}) : Promise.resolve();
     }));
-
-    group.remove();
-    targetCells.forEach(function (cell) { cell.classList.remove("is-flying"); });
-    ui.flightLayer.replaceChildren();
-    tokens.forEach(function (token) { playSound("tile", token); });
-    vibrateOnLanding();
-    await Promise.all(targetCells.map(function (cell) { return animateLandingCell(cell, reducedMotion); })
-      .concat([animateSourceReveal(revealCell, reducedMotion)]));
+    flights.forEach(flight => flight.remove());
+    sourceCells.forEach(cell => cell.classList.remove("is-flight-source"));
+    targetCells.forEach(cell => cell.classList.remove("is-flying"));
+    await animateSourceReveal(revealCell, reducedMotion);
     return true;
   }
 
@@ -2367,6 +2354,7 @@
 
   function updateCustomControls() {
     const isCustom = ui.difficultySelect.value === "custom";
+    ui.shuffleStepsInput.closest(".setting-field").style.display = ui.difficultySelect.value === "hard" ? "none" : "";
     const capacity = Number.parseInt(ui.capacityInput.value, 10) || settings.capacity;
     const patternCount = Number.parseInt(ui.patternCountInput.value, 10) || settings.patternCount;
     const maxFixedCount = Math.min(3, capacity - 1, patternCount);
@@ -2387,7 +2375,9 @@
     } else {
       const preset = PRESETS[ui.difficultySelect.value];
       const fixedHint = preset.fixedCount ? "；固定白格可能在同一列底部" : "";
-      ui.difficultyHint.textContent = preset.label + "：" + preset.shuffleSteps + " 步打乱 · " + preset.reserveCount + " 个暂存位" + fixedHint + "。";
+      ui.difficultyHint.textContent = preset.label + "：" +
+        (ui.difficultySelect.value === "hard" ? "随机混排 · " + preset.mysteryCount + " 个隐藏图案" : preset.shuffleSteps + " 步打乱") +
+        " · " + preset.reserveCount + " 个暂存位" + fixedHint + "。";
     }
   }
 

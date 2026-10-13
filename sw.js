@@ -1,10 +1,12 @@
-const CACHE_NAME = "hibo-jump-shell-20261013-7";
+const CACHE_NAME = "hibo-jump-shell-20261013-9";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./styles.css?v=20261013-7",
-  "./game.js?v=20261013-16",
+  "./game.js?v=20261013-18",
+  "./level-generator.js?v=20261013-2",
+  "./level-worker.js?v=20261013-2",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png"
