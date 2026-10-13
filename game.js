@@ -73,11 +73,11 @@
   const PRESETS = {
     easy: { label: "简单", patternCount: 3, capacity: 4, reserveCount: 4, shuffleSteps: 20, mysteryCount: 0, fixedCount: 0 },
     normal: { label: "普通", patternCount: 4, capacity: 4, reserveCount: 2, shuffleSteps: 45, mysteryCount: 4, fixedCount: 1 },
-    hard: { label: "困难", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 1600, mysteryCount: 12, fixedCount: 3 }
+    hard: { label: "困难", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 1800, mysteryCount: 40, fixedCount: 3 }
   };
 
   const CAMPAIGN_LEVEL_COUNT = 30;
-  const DEFAULT_SETTINGS = { difficulty: "hard", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 1600, mysteryCount: 12, fixedCount: 3 };
+  const DEFAULT_SETTINGS = { difficulty: "hard", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 1800, mysteryCount: 40, fixedCount: 3 };
   const STORAGE_KEY = "haibao-jump.local.v1";
   const SAVE_SLOT_COUNT = 3;
 
@@ -100,7 +100,7 @@
         shuffleSteps: 850 + (level - 16) * 80, mysteryCount: 14 + (level - 16) * 2, fixedCount: 2 };
     }
     return { difficulty: "custom", patternCount: 7, capacity: 12, reserveCount: 8,
-      shuffleSteps: 1250 + (level - 21) * 100, mysteryCount: Math.min(24, 20 + (level - 21) * 2), fixedCount: 3 };
+      shuffleSteps: 1250 + (level - 21) * 100, mysteryCount: Math.min(48, 20 + (level - 21) * 2), fixedCount: 3 };
   }
   const ui = {
     themeSelect: document.getElementById("themeSelect"),
@@ -362,7 +362,7 @@
       capacity: capacity,
       reserveCount: bounded(source.reserveCount, DEFAULT_SETTINGS.reserveCount, 0, 8),
       shuffleSteps: bounded(source.shuffleSteps, DEFAULT_SETTINGS.shuffleSteps, 10, 2400),
-      mysteryCount: bounded(source.mysteryCount, DEFAULT_SETTINGS.mysteryCount, 0, 24),
+      mysteryCount: bounded(source.mysteryCount, DEFAULT_SETTINGS.mysteryCount, 0, 48),
       fixedCount: bounded(source.fixedCount, DEFAULT_SETTINGS.fixedCount, 0, Math.min(3, capacity - 1, patternCount))
     };
   }
@@ -920,8 +920,8 @@
     let score = 0;
     let largestRun = 0;
     let largestTopGroup = 0;
-    let longRunPenalty = 0;
     let solvedColumns = 0;
+    const repeatedRuns = { 2: 0, 3: 0, 4: 0 };
     columns.forEach(function (column) {
       if (!column.length) return;
       largestTopGroup = Math.max(largestTopGroup, topGroupSize(column));
@@ -930,8 +930,7 @@
       let runLength = 0;
       let runCount = 0;
       function scoreRun(length) {
-        const excess = length - 2;
-        if (excess > 0) longRunPenalty += excess * excess * 5;
+        if (length >= 2 && length <= 4) repeatedRuns[length] += 1;
       }
       column.forEach(function (token) {
         if (isBlankToken(token)) {
@@ -958,7 +957,16 @@
       if (columnIsSortedForCapacity(column, capacity)) solvedColumns += 1;
     });
     const topGroupPenalty = Math.max(0, largestTopGroup - 1) ** 2 * 8;
-    return score - largestRun * 6 - longRunPenalty - topGroupPenalty - solvedColumns * 60;
+    const repeatedRunCount = repeatedRuns[2] + repeatedRuns[3] + repeatedRuns[4];
+    const runProfilePenalty = repeatedRunCount
+      ? (Math.abs(repeatedRuns[2] / repeatedRunCount - 0.85) +
+        Math.abs(repeatedRuns[3] / repeatedRunCount - 0.12) +
+        Math.abs(repeatedRuns[4] / repeatedRunCount - 0.03)) * 160
+      : 160;
+    return {
+      score: score - largestRun * 6 - runProfilePenalty - topGroupPenalty - solvedColumns * 60,
+      largestRun: largestRun
+    };
   }
 
   function buildSolvableBoard(currentSettings, seed) {
@@ -971,15 +979,16 @@
     const blankPatternCount = fixedCount === 0 ? 0 : fixedCount === 1 ? 1 :
       fixedCount === 2 ? (blankDistributionRoll < 65 ? 1 : 2) :
         (blankDistributionRoll < 40 ? 1 : blankDistributionRoll < 80 ? 2 : 3);
-    // Compare several solvable reverse walks so hard boards are less likely to leave
-    // large same-pattern runs connected just because one shuffle happened to do so.
-    const attemptCount = currentSettings.difficulty === "hard" ? 8 : 1;
+    // Compare several solvable reverse walks and prefer an 85/12/3 mix of
+    // repeated groups of two, three, and four matching tiles.
+    const isHardMode = currentSettings.difficulty === "hard";
+    const attemptCount = isHardMode ? 10 : 1;
     const reverseLookback = Math.min(16, Math.max(10, currentSettings.patternCount * 2));
     let bestColumns = null;
     let bestReverseSteps = -1;
     let bestQuality = -Infinity;
 
-    for (let attempt = 0; attempt < attemptCount; attempt += 1) {
+    for (let attempt = 0; attempt < attemptCount || (isHardMode && !bestColumns); attempt += 1) {
       const availablePatterns = [];
       for (let index = 0; index < currentSettings.patternCount; index += 1) availablePatterns.push(index + 1);
       for (let index = availablePatterns.length - 1; index > 0; index -= 1) {
@@ -1146,10 +1155,13 @@
       }
 
       const quality = scrambleQuality(columns, currentSettings.capacity);
+      // Allow an occasional four-run, but never start a hard board with five
+      // or more connected matching patterns. Hidden tiles use their real IDs.
+      if (isHardMode && quality.largestRun > 4) continue;
       if (randomWalkSteps > bestReverseSteps ||
-          (randomWalkSteps === bestReverseSteps && quality > bestQuality)) {
+          (randomWalkSteps === bestReverseSteps && quality.score > bestQuality)) {
         bestReverseSteps = randomWalkSteps;
-        bestQuality = quality;
+        bestQuality = quality.score;
         bestColumns = columns;
       }
     }
@@ -2120,7 +2132,7 @@
       capacity: capacity,
       reserveCount: clampInteger(ui.reserveCountInput, 0, 8, settings.reserveCount),
       shuffleSteps: clampInteger(ui.shuffleStepsInput, 10, 2400, settings.shuffleSteps),
-      mysteryCount: clampInteger(ui.mysteryCountInput, 0, 24, settings.mysteryCount),
+      mysteryCount: clampInteger(ui.mysteryCountInput, 0, 48, settings.mysteryCount),
       fixedCount: clampInteger(ui.fixedCountInput, 0, Math.min(3, capacity - 1, Number.parseInt(ui.patternCountInput.value, 10) || settings.patternCount), settings.fixedCount)
     };
   }
