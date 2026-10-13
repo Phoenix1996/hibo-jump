@@ -73,11 +73,11 @@
   const PRESETS = {
     easy: { label: "简单", patternCount: 3, capacity: 4, reserveCount: 4, shuffleSteps: 20, mysteryCount: 0, fixedCount: 0 },
     normal: { label: "普通", patternCount: 4, capacity: 4, reserveCount: 2, shuffleSteps: 45, mysteryCount: 4, fixedCount: 1 },
-    hard: { label: "困难", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 1000, mysteryCount: 12, fixedCount: 3 }
+    hard: { label: "困难", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 1600, mysteryCount: 12, fixedCount: 3 }
   };
 
   const CAMPAIGN_LEVEL_COUNT = 30;
-  const DEFAULT_SETTINGS = { difficulty: "hard", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 1000, mysteryCount: 12, fixedCount: 3 };
+  const DEFAULT_SETTINGS = { difficulty: "hard", patternCount: 7, capacity: 12, reserveCount: 8, shuffleSteps: 1600, mysteryCount: 12, fixedCount: 3 };
   const STORAGE_KEY = "haibao-jump.local.v1";
   const SAVE_SLOT_COUNT = 3;
 
@@ -919,17 +919,19 @@
   function scrambleQuality(columns, capacity) {
     let score = 0;
     let largestRun = 0;
+    let largestTopGroup = 0;
     let longRunPenalty = 0;
     let solvedColumns = 0;
     columns.forEach(function (column) {
       if (!column.length) return;
+      largestTopGroup = Math.max(largestTopGroup, topGroupSize(column));
       const colors = new Set();
       let previousPattern = null;
       let runLength = 0;
       let runCount = 0;
       function scoreRun(length) {
         const excess = length - 2;
-        if (excess > 0) longRunPenalty += excess * excess;
+        if (excess > 0) longRunPenalty += excess * excess * 5;
       }
       column.forEach(function (token) {
         if (isBlankToken(token)) {
@@ -955,7 +957,8 @@
       score += runCount * 3;
       if (columnIsSortedForCapacity(column, capacity)) solvedColumns += 1;
     });
-    return score - largestRun * 5 - longRunPenalty * 2 - solvedColumns * 60;
+    const topGroupPenalty = Math.max(0, largestTopGroup - 1) ** 2 * 8;
+    return score - largestRun * 6 - longRunPenalty - topGroupPenalty - solvedColumns * 60;
   }
 
   function buildSolvableBoard(currentSettings, seed) {
@@ -970,7 +973,7 @@
         (blankDistributionRoll < 40 ? 1 : blankDistributionRoll < 80 ? 2 : 3);
     // Compare several solvable reverse walks so hard boards are less likely to leave
     // large same-pattern runs connected just because one shuffle happened to do so.
-    const attemptCount = currentSettings.difficulty === "hard" ? 12 : 1;
+    const attemptCount = currentSettings.difficulty === "hard" ? 8 : 1;
     const reverseLookback = Math.min(16, Math.max(10, currentSettings.patternCount * 2));
     let bestColumns = null;
     let bestReverseSteps = -1;
@@ -1007,6 +1010,7 @@
         columns.push(column);
       }
       columns.push([]);
+      const reserve = Array(currentSettings.reserveCount).fill(null);
 
       const recentReverseMoves = [];
       let completedReverseSteps = 0;
@@ -1027,14 +1031,50 @@
             // A column that becomes complete during reverse scrambling would be locked
             // before the earlier reverse moves could be undone in normal play.
             if (wouldCompleteColumnAfterAdding(target, patternId, currentSettings.capacity)) continue;
-            candidates.push({ donorIndex: donorIndex, targetIndex: targetIndex, patternId: patternId, count: 1 });
+            candidates.push({
+              sourceKind: "column", sourceIndex: donorIndex,
+              targetKind: "column", targetIndex: targetIndex,
+              patternId: patternId
+            });
+          }
+
+          // Reverse a normal tray deposit: take a tile from a solved or mixed
+          // column and place it in an empty reserve slot.
+          for (let reserveIndex = 0; reserveIndex < reserve.length; reserveIndex += 1) {
+            if (reserve[reserveIndex] !== null) continue;
+            candidates.push({
+              sourceKind: "column", sourceIndex: donorIndex,
+              targetKind: "reserve", targetIndex: reserveIndex,
+              patternId: patternId
+            });
+          }
+        }
+
+        // Reverse a normal tray pickup. Unlike column-to-column moves, the
+        // original move had no color-matching restriction, so this spreads
+        // held tiles across different stacks and breaks up long runs.
+        for (let reserveIndex = 0; reserveIndex < reserve.length; reserveIndex += 1) {
+          const patternId = actualPatternId(reserve[reserveIndex]);
+          if (!patternId) continue;
+          for (let targetIndex = 0; targetIndex < columns.length; targetIndex += 1) {
+            const target = columns[targetIndex];
+            if (columnIsSortedForCapacity(target, currentSettings.capacity)) continue;
+            if (target.length >= currentSettings.capacity) continue;
+            if (wouldCompleteColumnAfterAdding(target, patternId, currentSettings.capacity)) continue;
+            candidates.push({
+              sourceKind: "reserve", sourceIndex: reserveIndex,
+              targetKind: "column", targetIndex: targetIndex,
+              patternId: patternId
+            });
           }
         }
 
         const choices = candidates.filter(function (candidate) {
           return !recentReverseMoves.some(function (previousMove) {
-            return candidate.donorIndex === previousMove.targetIndex &&
-              candidate.targetIndex === previousMove.donorIndex &&
+            return candidate.sourceKind === previousMove.targetKind &&
+              candidate.sourceIndex === previousMove.targetIndex &&
+              candidate.targetKind === previousMove.sourceKind &&
+              candidate.targetIndex === previousMove.sourceIndex &&
               candidate.patternId === previousMove.patternId;
           });
         });
@@ -1042,17 +1082,57 @@
         if (!availableChoices.length) break;
 
         const chosen = availableChoices[pickIndex(availableChoices.length)];
-        const donor = columns[chosen.donorIndex];
-        const group = donor.splice(donor.length - chosen.count, chosen.count);
-        columns[chosen.targetIndex].push.apply(columns[chosen.targetIndex], group);
+        const token = chosen.sourceKind === "column"
+          ? columns[chosen.sourceIndex].pop()
+          : reserve[chosen.sourceIndex];
+        if (chosen.sourceKind === "reserve") reserve[chosen.sourceIndex] = null;
+        if (chosen.targetKind === "column") columns[chosen.targetIndex].push(token);
+        else reserve[chosen.targetIndex] = token;
         recentReverseMoves.push(chosen);
         if (recentReverseMoves.length > reverseLookback) recentReverseMoves.shift();
         completedReverseSteps += 1;
       }
+      const randomWalkSteps = completedReverseSteps;
 
-      const alreadySolved = columns.filter(function (column) {
-        return columnIsSortedForCapacity(column, currentSettings.capacity);
-      }).length === currentSettings.patternCount;
+      // Keep the visible puzzle's tray empty. These are still legal reverse
+      // moves: in the solve path, each tile is first moved from its column to
+      // a free tray slot. The empty working column provides ample drain space.
+      while (reserve.some(function (token) { return token !== null; })) {
+        const releaseCandidates = [];
+        for (let reserveIndex = 0; reserveIndex < reserve.length; reserveIndex += 1) {
+          const patternId = actualPatternId(reserve[reserveIndex]);
+          if (!patternId) continue;
+          for (let targetIndex = 0; targetIndex < columns.length; targetIndex += 1) {
+            const target = columns[targetIndex];
+            if (columnIsSortedForCapacity(target, currentSettings.capacity)) continue;
+            if (target.length >= currentSettings.capacity) continue;
+            if (wouldCompleteColumnAfterAdding(target, patternId, currentSettings.capacity)) continue;
+            releaseCandidates.push({ reserveIndex: reserveIndex, targetIndex: targetIndex, patternId: patternId });
+          }
+        }
+        if (!releaseCandidates.length) break;
+
+        const scoredReleases = releaseCandidates.map(function (candidate) {
+          const target = columns[candidate.targetIndex];
+          const topPattern = target.length ? actualPatternId(target[target.length - 1]) : null;
+          const joinsGroup = topPattern === candidate.patternId;
+          const groupSize = joinsGroup ? topGroupSize(target) : 0;
+          return { candidate: candidate, score: joinsGroup ? 12 + groupSize * groupSize : 0 };
+        });
+        const lowestScore = Math.min.apply(null, scoredReleases.map(function (item) { return item.score; }));
+        const bestReleases = scoredReleases.filter(function (item) { return item.score === lowestScore; });
+        const chosenRelease = bestReleases[pickIndex(bestReleases.length)].candidate;
+        const token = reserve[chosenRelease.reserveIndex];
+        reserve[chosenRelease.reserveIndex] = null;
+        columns[chosenRelease.targetIndex].push(token);
+        completedReverseSteps += 1;
+      }
+      if (reserve.some(function (token) { return token !== null; })) continue;
+
+      const alreadySolved = reserve.every(function (token) { return token === null; }) &&
+        columns.filter(function (column) {
+          return columnIsSortedForCapacity(column, currentSettings.capacity);
+        }).length === currentSettings.patternCount;
       if (alreadySolved) {
         const emptyIndex = columns.findIndex(function (column) { return column.length === 0; });
         const sourceIndex = columns.findIndex(function (column) {
@@ -1061,13 +1141,14 @@
         if (emptyIndex >= 0 && sourceIndex >= 0) {
           const patternId = columns[sourceIndex].pop();
           columns[emptyIndex].push(patternId);
+          completedReverseSteps += 1;
         }
       }
 
       const quality = scrambleQuality(columns, currentSettings.capacity);
-      if (completedReverseSteps > bestReverseSteps ||
-          (completedReverseSteps === bestReverseSteps && quality > bestQuality)) {
-        bestReverseSteps = completedReverseSteps;
+      if (randomWalkSteps > bestReverseSteps ||
+          (randomWalkSteps === bestReverseSteps && quality > bestQuality)) {
+        bestReverseSteps = randomWalkSteps;
         bestQuality = quality;
         bestColumns = columns;
       }
