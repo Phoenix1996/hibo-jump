@@ -137,6 +137,8 @@
     victoryBanner: document.getElementById("victoryBanner"),
     victoryNewGameButton: document.getElementById("victoryNewGameButton"),
     victoryButtonText: document.getElementById("victoryButtonText"),
+    victoryTitle: document.getElementById("victoryTitle"),
+    victoryDescription: document.getElementById("victoryDescription"),
     settingsDialog: document.getElementById("settingsDialog"),
     closeSettingsButton: document.getElementById("closeSettingsButton"),
     cancelSettingsButton: document.getElementById("cancelSettingsButton"),
@@ -172,6 +174,7 @@
   let campaignMode = false;
   let campaignLevel = 1;
   let campaignUnlockedLevel = 1;
+  let campaignCompletedLevels = new Set();
   let dailyMode = false;
   let dailyChallengeDate = "";
   let dailyBest = null;
@@ -508,7 +511,9 @@
     try { stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null"); } catch (error) { stored = null; }
     if (!stored || typeof stored !== "object") return false;
     settings = normalizeSettings(stored.settings);
-    campaignUnlockedLevel = Math.max(1, Math.min(CAMPAIGN_LEVEL_COUNT, Number.parseInt(stored.campaignUnlockedLevel, 10) || 1));
+    const campaignProgress = normalizeCampaignProgress(stored.campaignCompletedLevels, stored.campaignUnlockedLevel);
+    campaignUnlockedLevel = campaignProgress.unlocked;
+    campaignCompletedLevels = campaignProgress.completed;
     currentThemeId = THEMES[stored.themeId] ? stored.themeId : "ocean";
     soundEnabled = stored.soundEnabled !== false;
     vibrationEnabled = stored.vibrationEnabled !== false;
@@ -524,7 +529,8 @@
     const activeLayoutMigrated = Boolean(saveSlots[activeSaveId] &&
       (saveSlots[activeSaveId].migratedBlankLayout || saveSlots[activeSaveId].regeneratedBoard));
     const restored = Boolean(saveSlots[activeSaveId] && restoreSnapshot(saveSlots[activeSaveId]));
-    if (restored && activeLayoutMigrated) persistLocalData(true);
+    const recoveredCompletion = restored && recordCampaignVictory();
+    if (restored && (activeLayoutMigrated || recoveredCompletion)) persistLocalData(true);
     return restored;
   }
 
@@ -538,6 +544,7 @@
       soundEnabled: soundEnabled,
       vibrationEnabled: vibrationEnabled,
       campaignUnlockedLevel: campaignUnlockedLevel,
+      campaignCompletedLevels: Array.from(campaignCompletedLevels).sort(function (a, b) { return a - b; }),
       dailyBest: dailyBest,
       dailyHistory: dailyHistory,
       saveSlots: saveSlots.map(function (snapshot) {
@@ -647,14 +654,15 @@
     ui.dailyChallengeButton.setAttribute("aria-label", dailyActive
       ? "重开 " + formatDateKey(today) + " 的每日挑战"
       : "开始 " + formatDateKey(today) + " 的每日挑战");
-    ui.campaignProgress.textContent = "已解锁 " + campaignUnlockedLevel + " / " + CAMPAIGN_LEVEL_COUNT + " 关";
+    ui.campaignProgress.textContent = "已通过 " + campaignCompletedLevels.size + " / " + CAMPAIGN_LEVEL_COUNT +
+      " 关 · 已解锁 " + campaignUnlockedLevel + " 关";
     ui.campaignLevelGrid.innerHTML = Array.from({ length: CAMPAIGN_LEVEL_COUNT }, function (_, index) {
       const level = index + 1;
       const locked = level > campaignUnlockedLevel;
       const current = campaignMode && level === campaignLevel;
-      const completed = level < campaignUnlockedLevel;
-      const stateClass = locked ? " is-locked" : (current ? " is-current" : (completed ? " is-complete" : ""));
-      const stateLabel = locked ? "未解锁" : (current ? "当前关卡" : (completed ? "已通过" : "已解锁"));
+      const completed = campaignCompletedLevels.has(level);
+      const stateClass = locked ? " is-locked" : (completed ? " is-complete" : (current ? " is-current" : ""));
+      const stateLabel = locked ? "未解锁" : (completed ? "已通过" : (current ? "当前关卡" : "已解锁"));
       return '<button class="campaign-level-button' + stateClass + '" type="button"' +
         ' data-campaign-level="' + level + '" aria-label="第 ' + level + ' 关，' + stateLabel + '"' +
         (locked ? " disabled" : "") + (current ? ' aria-current="step"' : "") + '>' +
@@ -734,6 +742,10 @@
   function handleVictoryAction() {
     if (campaignMode && isVictory() && campaignLevel < CAMPAIGN_LEVEL_COUNT) {
       startCampaignLevel(campaignLevel + 1);
+      return;
+    }
+    if (campaignMode && isVictory()) {
+      openCampaignDialog();
       return;
     }
     if (dailyMode) {
@@ -1012,6 +1024,23 @@
     const completed = board.columns.filter(columnIsSorted);
     const emptyColumns = board.columns.filter(function (column) { return column.length === 0; });
     return completed.length === settings.patternCount && emptyColumns.length === 1;
+  }
+
+  function normalizeCampaignProgress(source, unlockedLevel) {
+    let unlocked = Math.max(1, Math.min(CAMPAIGN_LEVEL_COUNT, Number.parseInt(unlockedLevel, 10) || 1));
+    const completed = new Set(Array.isArray(source)
+      ? source.filter(level => Number.isInteger(level) && level >= 1 && level <= CAMPAIGN_LEVEL_COUNT)
+      : Array.from({ length: unlocked - 1 }, function (_, index) { return index + 1; }));
+    completed.forEach(function (level) { unlocked = Math.max(unlocked, Math.min(CAMPAIGN_LEVEL_COUNT, level + 1)); });
+    return { unlocked: unlocked, completed: completed };
+  }
+
+  function recordCampaignVictory() {
+    if (!campaignMode || !isVictory()) return false;
+    const newlyCompleted = !campaignCompletedLevels.has(campaignLevel);
+    campaignCompletedLevels.add(campaignLevel);
+    campaignUnlockedLevel = Math.max(campaignUnlockedLevel, Math.min(CAMPAIGN_LEVEL_COUNT, campaignLevel + 1));
+    return newlyCompleted;
   }
 
   function announce(message) {
@@ -1339,10 +1368,14 @@
     ui.campaignButton.setAttribute("aria-label", campaignMode
       ? "关卡闯关，当前第 " + campaignLevel + " 关，已解锁 " + campaignUnlockedLevel + " 关"
       : "关卡闯关，已解锁 " + campaignUnlockedLevel + " 关" + (dailyMode ? "；每日挑战进行中" : ""));
-    const victoryButtonLabel = campaignMode && campaignLevel < CAMPAIGN_LEVEL_COUNT
-      ? "下一关"
-      : dailyMode ? "再挑战一次" : "再玩一局";
+    const victoryButtonLabel = campaignMode ? (campaignLevel < CAMPAIGN_LEVEL_COUNT ? "下一关" : "关卡列表") :
+      dailyMode ? "再挑战一次" : "再玩一局";
     if (ui.victoryButtonText.textContent !== victoryButtonLabel) ui.victoryButtonText.textContent = victoryButtonLabel;
+    const campaignFinished = campaignMode && campaignCompletedLevels.size === CAMPAIGN_LEVEL_COUNT;
+    ui.victoryTitle.textContent = campaignFinished ? "30 关全部通过！" : campaignMode ? "第 " + campaignLevel + " 关完成！" : "整理完成！";
+    ui.victoryDescription.textContent = campaignFinished ? "恭喜完成全部挑战，也可以重玩喜欢的关卡。" :
+      campaignMode ? "本关用了 " + moveCount + " 步，" + (campaignLevel < CAMPAIGN_LEVEL_COUNT ? "继续挑战下一关吧。" : "可以从关卡列表选择重玩。") :
+        "每种图案都找到自己的位置了。";
     const shuffleLabel = dailyMode ? "换随机局" : "打乱";
     if (ui.shuffleButtonText.textContent !== shuffleLabel) ui.shuffleButtonText.textContent = shuffleLabel;
     ui.shuffleButton.setAttribute("aria-label", dailyMode ? "离开每日挑战并开始随机局" : "重新打乱棋盘");
@@ -1792,8 +1825,10 @@
 
     if (!committed) return;
     const won = isVictory();
-    if (won && campaignMode && campaignLevel < CAMPAIGN_LEVEL_COUNT) {
-      campaignUnlockedLevel = Math.max(campaignUnlockedLevel, campaignLevel + 1);
+    if (won && campaignMode) {
+      recordCampaignVictory();
+      renderCampaignLevels();
+      render();
     }
     persistLocalData(true);
     if (won) {
