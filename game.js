@@ -990,6 +990,7 @@
     return {
       score: score - topGroupPenalty - solvedColumns * 60,
       largestRun: largestRun,
+      solvedColumns: solvedColumns,
       pairCount: repeatedRuns[2],
       runCount: patternRunCount,
       pairRate: pairRate
@@ -1018,14 +1019,9 @@
       const targetHeights = candidateLayouts[layoutIndex].targetHeights;
       if (currentSettings.reserveCount < 1) continue;
       const columns = sourceColumns.map(function (column) { return column.slice(); });
-      const hasLockedOverfullColumn = columns.some(function (column, index) {
-        return column.length > targetHeights[index] && columnIsSortedForCapacity(column, currentSettings.capacity);
-      });
-      if (hasLockedOverfullColumn) continue;
-
       const visited = new Set();
       let exploredStates = 0;
-      const stateBudget = 320;
+      const stateBudget = 900;
       function searchShape() {
         const heightsMatch = columns.every(function (column, index) { return column.length === targetHeights[index]; });
         if (heightsMatch) return true;
@@ -1045,7 +1041,7 @@
 
         const directTransfers = [];
         columns.forEach(function (donor, donorIndex) {
-          if (donor.length <= targetHeights[donorIndex] || columnIsSortedForCapacity(donor, currentSettings.capacity)) return;
+          if (donor.length <= targetHeights[donorIndex]) return;
           const groupSize = topGroupSize(donor);
           if (!groupSize) return;
           const patternId = actualPatternId(donor[donor.length - 1]);
@@ -1100,16 +1096,24 @@
     // prefer boards with no adjacent matching patterns. Hard boards never
     // retain a run longer than two.
     const isHardMode = currentSettings.difficulty === "hard";
-    const attemptCount = isHardMode ? 12 : 1;
+    const attemptCount = isHardMode ? 16 : 1;
     const reverseLookback = Math.min(16, Math.max(10, currentSettings.patternCount * 2));
     let bestColumns = null;
     let bestReverseSteps = -1;
     let bestQuality = -Infinity;
     let bestPairCount = Infinity;
     let bestShapedColumns = null;
-    let bestShapedQuality = Infinity;
-    let bestShapedPairCount = Infinity;
-    let fallbackHardColumns = null;
+    let bestShapedQuality = null;
+
+    function shapedBoardIsBetter(quality, previousQuality) {
+      if (!previousQuality) return true;
+      if (quality.solvedColumns !== previousQuality.solvedColumns) {
+        return quality.solvedColumns < previousQuality.solvedColumns;
+      }
+      if (quality.largestRun !== previousQuality.largestRun) return quality.largestRun < previousQuality.largestRun;
+      if (quality.pairCount !== previousQuality.pairCount) return quality.pairCount < previousQuality.pairCount;
+      return quality.score > previousQuality.score;
+    }
 
     for (let attempt = 0; attempt < attemptCount; attempt += 1) {
       const availablePatterns = [];
@@ -1142,11 +1146,6 @@
         columns.push(column);
       }
       columns.push([]);
-      if (isHardMode && !fallbackHardColumns) {
-        fallbackHardColumns = columns.map(function (column) { return column.slice(); });
-        const fallbackSource = fallbackHardColumns[currentSettings.patternCount - 1];
-        fallbackHardColumns[currentSettings.patternCount].push(fallbackSource.pop());
-      }
       const reserve = Array(currentSettings.reserveCount).fill(null);
 
       const recentReverseMoves = [];
@@ -1322,11 +1321,11 @@
       }
 
       const quality = scrambleQuality(candidateColumns, currentSettings.capacity);
-      if (isHardMode && (!bestShapedColumns || quality.largestRun < bestShapedQuality ||
-          (quality.largestRun === bestShapedQuality && quality.pairCount < bestShapedPairCount))) {
-        bestShapedColumns = candidateColumns;
-        bestShapedQuality = quality.largestRun;
-        bestShapedPairCount = quality.pairCount;
+      // A hard start must not look like a mostly completed board. Keep at most
+      // one already-complete column, and prefer candidates with none.
+      if (isHardMode && quality.solvedColumns <= 1 && shapedBoardIsBetter(quality, bestShapedQuality)) {
+        bestShapedColumns = candidateColumns.map(function (column) { return column.slice(); });
+        bestShapedQuality = quality;
       }
       // Source game tiles are scored before mystery faces are added.
       if (isHardMode && quality.largestRun > 2) {
@@ -1345,7 +1344,8 @@
       yield { progress: Math.min(96, Math.round(((attempt + 1) / attemptCount) * 96)) };
     }
 
-    const columns = bestColumns || bestShapedColumns || fallbackHardColumns || [[]];
+    const columns = bestColumns || bestShapedColumns;
+    if (!columns) throw new Error("没有生成足够打乱的困难棋盘，请重新开始。");
 
     const mysteryCandidatesByNeighborMatches = [[], [], []];
     columns.forEach(function (column, columnIndex) {
