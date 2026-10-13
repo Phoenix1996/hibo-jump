@@ -184,6 +184,7 @@
   let board = null;
   let initialBoard = null;
   let selected = null;
+  let activeDragSource = null;
   let moveCount = 0;
   let moveHistory = [];
   let isAnimating = false;
@@ -2144,20 +2145,38 @@
       return;
     }
     selected = { kind: kind, index: index };
+    activeDragSource = { kind: kind, index: index };
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", kind + ":" + index);
+    render();
     announce(kind === "column" ? "拖动顶部图案组到目标列，或拖到暂存位收起一个。" : "拖动暂存图案到可以放入的列。");
   }
 
   function handleDrop(event, targetKind, targetIndex) {
     event.preventDefault();
-    const payload = event.dataTransfer.getData("text/plain").split(":");
-    if (payload.length !== 2) return;
-    const sourceKind = payload[0];
-    const sourceIndex = Number(payload[1]);
-    selected = { kind: sourceKind, index: sourceIndex };
+    if (isAnimating || !activeDragSource) return;
+    const payload = event.dataTransfer ? event.dataTransfer.getData("text/plain") : "";
+    if (payload && payload !== activeDragSource.kind + ":" + activeDragSource.index) return;
+    selected = { kind: activeDragSource.kind, index: activeDragSource.index };
+    activeDragSource = null;
     suppressClickUntil = Date.now() + 400;
     handleTarget(targetKind, targetIndex);
+  }
+
+  function handleDragOver(event) {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = activeDragSource && !isAnimating ? "move" : "none";
+  }
+
+  function handleDragEnd() {
+    if (!activeDragSource) return;
+    activeDragSource = null;
+    suppressClickUntil = Date.now() + 400;
+    if (!isAnimating) {
+      selected = null;
+      render();
+      announce("已取消拖动。");
+    }
   }
 
   ui.themeSelect.addEventListener("change", function (event) { applyTheme(event.target.value); });
@@ -2210,8 +2229,10 @@
     const element = event.target.closest('[data-kind="reserve"]');
     if (element) setDragSource(event, element);
   });
-  ui.columns.addEventListener("dragover", function (event) { event.preventDefault(); });
-  ui.reserveSlots.addEventListener("dragover", function (event) { event.preventDefault(); });
+  ui.columns.addEventListener("dragover", handleDragOver);
+  ui.reserveSlots.addEventListener("dragover", handleDragOver);
+  ui.columns.addEventListener("dragend", handleDragEnd);
+  ui.reserveSlots.addEventListener("dragend", handleDragEnd);
   ui.columns.addEventListener("drop", function (event) {
     const element = event.target.closest('[data-kind="column"]');
     if (element) handleDrop(event, "column", Number(element.dataset.index));

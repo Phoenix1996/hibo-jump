@@ -42,6 +42,7 @@ jobs:
           node scripts/verify-campaign-progress.cjs
           node scripts/verify-generation-recovery.cjs
           node scripts/verify-undo-resume.cjs
+          node scripts/verify-drag-lifecycle.cjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
