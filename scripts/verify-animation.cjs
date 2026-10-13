@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const source = fs.readFileSync(require.resolve("../game.js"), "utf8");
 function extract(name) {
-  const marker = (name === "animateGroupMove" ? "async function " : "function ") + name + "(";
+  const marker = (["animateGroupMove", "animateMove"].includes(name) ? "async function " : "function ") + name + "(";
   const start = source.indexOf(marker);
   assert(start >= 0, name);
   let depth = 0, quote = "", escaped = false, line = false, block = false;
@@ -20,7 +20,7 @@ function extract(name) {
   }
   throw new Error("Unclosed " + name);
 }
-const functions = ["actualPatternId", "isBlankToken", "isMysteryToken", "revealTopToken", "centeredFlightRect", "animateGroupMove"].map(extract).join("\n");
+const functions = ["actualPatternId", "isBlankToken", "isMysteryToken", "revealTopToken", "centeredFlightRect", "columnRouteKeyframes", "animateGroupMove"].map(extract).join("\n");
 
 async function checkGroup(count, reducedMotion) {
   const board = { columns: [Array(count).fill("p1"), []], reserve: [] };
@@ -70,6 +70,33 @@ async function checkGroup(count, reducedMotion) {
 async function main() {
   for (const count of [1, 3, 12]) await checkGroup(count, false);
   await checkGroup(3, true);
+  const stashBoard = { columns: [["p1", "p1"], []], reserve: [null] };
+  const events = [], routes = [];
+  const rim = { getBoundingClientRect: () => ({ top: 100 }) };
+  const columnCell = { classList: { add() {}, remove() {} }, querySelector: () => null,
+    closest: () => rim, getBoundingClientRect: () => ({left:100,top:600,width:44,height:50}) };
+  const reserveCell = { classList: { add() {}, remove() {} }, querySelector: () => null,
+    closest: () => null, getBoundingClientRect: () => ({left:150,top:760,width:34,height:34}) };
+  const stashScope = {
+    board: stashBoard, window: {matchMedia:()=>({matches:false})},
+    ui: {reserveSlots:{querySelector:()=>reserveCell}},
+    sourceElements: move => [move.source.kind === "column" ? columnCell : reserveCell],
+    destinationElements: move => [move.target.kind === "column" ? columnCell : reserveCell],
+    createFlightTile: () => ({querySelector:()=>null,remove(){}}), render(){},
+    elementsForColumnLevels:()=>[columnCell],
+    animateFlightTile:async (tile,source,target,reduced,route)=>{events.push("flight");routes.push(route);},
+    revealFlightTile:async()=>{}, animateSourceReveal:async()=>{},
+    playSound:()=>events.push("sound"),vibrateOnLanding:()=>events.push("land")
+  };
+  const stash = new Function("scope", "with(scope){" + ["actualPatternId","isBlankToken","isMysteryToken",
+    "revealTopToken","centeredFlightRect","animateMove"].map(extract).join("\n") + "\nreturn animateMove;}")(stashScope);
+  assert(await stash({source:{kind:"column",index:0},target:{kind:"reserve",index:0},patternIds:["p1"]}));
+  assert.deepEqual(stashBoard, {columns:[["p1"],[]],reserve:["p1"]});
+  assert.equal(routes[0].sourceRim,100,"Deposit must leave through column rim even when the top tile is low");
+  assert(await stash({source:{kind:"reserve",index:0},target:{kind:"column",index:0},patternIds:["p1"]}));
+  assert.deepEqual(stashBoard, {columns:[["p1","p1"],[]],reserve:[null]});
+  assert.equal(routes[1].targetRim,100,"Pickup must enter through destination column rim");
+  assert.deepEqual(events,["sound","flight","land","sound","flight","land"]);
   const frequencies = [], volumes = [];
   const context = {
     currentTime: 0, destination: {},

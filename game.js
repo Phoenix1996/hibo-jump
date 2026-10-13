@@ -1087,16 +1087,34 @@
     return Math.max(180, Math.min(250, 180 + distance * 0.11));
   }
 
-  async function animateFlightTile(tile, sourceRect, targetRect, reducedMotion) {
+  function columnRouteKeyframes(sourceRect, targetRect, sourceRim, targetRim) {
+    const dx = targetRect.left - sourceRect.left;
+    const dy = targetRect.top - sourceRect.top;
+    const lift = sourceRect.height * 0.72 + 6;
+    const exitY = sourceRim - sourceRect.top - lift;
+    const entryY = targetRim - sourceRect.top - lift;
+    const bridgeY = Math.min(exitY, entryY) - 12;
+    return [
+      { transform: "translate3d(0,0,0) scale(1)", offset: 0 },
+      { transform: "translate3d(0," + exitY + "px,0) scale(1.03)", offset: 0.23 },
+      { transform: "translate3d(" + dx + "px," + bridgeY + "px,0) scale(1.04)", offset: 0.59 },
+      { transform: "translate3d(" + dx + "px," + entryY + "px,0) scale(1.02)", offset: 0.70 },
+      { transform: "translate3d(" + dx + "px," + (dy + 2) + "px,0) scale(1.035,.96)", offset: 0.92 },
+      { transform: "translate3d(" + dx + "px," + dy + "px,0) scale(1)", offset: 1 }
+    ];
+  }
+
+  async function animateFlightTile(tile, sourceRect, targetRect, reducedMotion, route) {
     const image = tile.querySelector("img");
     if (image && typeof image.decode === "function") await image.decode().catch(function () {});
-    const duration = flightDuration(sourceRect, targetRect, reducedMotion);
+    const duration = route && !reducedMotion ? Math.min(320, 250 + Math.abs(targetRect.left - sourceRect.left) * .07) :
+      flightDuration(sourceRect, targetRect, reducedMotion);
     const deltaX = targetRect.left - sourceRect.left;
     const deltaY = targetRect.top - sourceRect.top;
     if (typeof tile.animate === "function") {
       const keyframes = reducedMotion
         ? [{ transform: "translate3d(0, 0, 0)" }, { transform: "translate3d(" + deltaX + "px, " + deltaY + "px, 0)" }]
-        : flightKeyframes(sourceRect, targetRect);
+        : route ? columnRouteKeyframes(sourceRect, targetRect, route.sourceRim, route.targetRim) : flightKeyframes(sourceRect, targetRect);
       const animation = tile.animate(keyframes, {
         duration: duration,
         easing: reducedMotion ? "ease-out" : "cubic-bezier(.18,.78,.22,1)",
@@ -1593,6 +1611,10 @@
     const token = move.patternIds[0];
     const sourceRect = source.getBoundingClientRect();
     const initialTargetRect = centeredFlightRect(sourceRect, oldDestination.getBoundingClientRect());
+    const sourceStack = source.closest(".column-stack");
+    const targetStack = oldDestination.closest(".column-stack");
+    const route = { sourceRim: sourceStack ? sourceStack.getBoundingClientRect().top : sourceRect.top,
+      targetRim: targetStack ? targetStack.getBoundingClientRect().top : initialTargetRect.top };
     const flight = createFlightTile(token, sourceRect, null, null, source);
     const flightImage = flight.querySelector("img");
     if (flightImage) {
@@ -1645,12 +1667,12 @@
       }
     }
 
-    await animateFlightTile(flight, sourceRect, targetRect, reducedMotion);
+    playSound("tile", token);
+    await animateFlightTile(flight, sourceRect, targetRect, reducedMotion, route);
     await revealFlightTile(flight, token, sourceRect, targetRect, reducedMotion);
     flight.remove();
     destination.classList.remove("is-flying");
     await animateSourceReveal(revealCell, reducedMotion);
-    playSound("tile", token);
     vibrateOnLanding();
     return true;
   }
@@ -1705,26 +1727,15 @@
       playSound("tile", tokens[sourceOffset], order);
       const dx = targetRect.left - sourceRect.left;
       const dy = targetRect.top - sourceRect.top;
-      const lift = sourceRect.height * 0.72 + 6;
-      const exitY = sourceRim - sourceRect.top - lift;
-      const entryY = targetRim - sourceRect.top - lift;
-      const bridgeY = Math.min(exitY, entryY) - 12;
       const frames = reducedMotion ? [
         { transform: "translate3d(0,0,0)" },
         { transform: "translate3d(" + dx + "px," + dy + "px,0)" }
-      ] : [
-        { transform: "translate3d(0,0,0) scale(1)", offset: 0 },
-        { transform: "translate3d(0," + exitY + "px,0) scale(1.03)", offset: 0.23 },
-        { transform: "translate3d(" + dx + "px," + bridgeY + "px,0) scale(1.04)", offset: 0.59 },
-        { transform: "translate3d(" + dx + "px," + entryY + "px,0) scale(1.02)", offset: 0.70 },
-        { transform: "translate3d(" + dx + "px," + (dy + 2) + "px,0) scale(1.035,.96)", offset: 0.92 },
-        { transform: "translate3d(" + dx + "px," + dy + "px,0) scale(1)", offset: 1 }
-      ];
+      ] : columnRouteKeyframes(sourceRect, targetRect, sourceRim, targetRim);
       if (typeof flight.animate === "function") {
         const animation = flight.animate(frames, { duration: duration, easing: "linear", fill: "forwards" });
         await animation.finished.catch(function () {});
       } else {
-        await animateFlightTile(flight, sourceRect, targetRect, reducedMotion);
+        await animateFlightTile(flight, sourceRect, targetRect, reducedMotion, { sourceRim: sourceRim, targetRim: targetRim });
       }
       await revealFlightTile(flight, tokens[sourceOffset], sourceRect, targetRect, reducedMotion);
       vibrateOnLanding(true);
