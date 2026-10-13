@@ -1,6 +1,8 @@
 "use strict";
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const vm = require("node:vm");
+const path = require("node:path");
 const levels = require("../level-generator.js");
 const source = fs.readFileSync(require.resolve("../game.js"), "utf8");
 function extract(name) {
@@ -10,13 +12,11 @@ function extract(name) {
   assert(end > match.index);
   return source.slice(match.index, end + 4);
 }
-const helpers = ["actualPatternId", "isBlankToken", "isMysteryToken", "isFixedToken",
-  "revealTopToken", "columnIsSortedForCapacity", "createSeededRandom", "randomIndex",
-  "wouldCompleteColumnAfterAdding", "topGroupSize", "scrambleQuality", "generateReverseBoardSteps",
-  "generateSolvableBoardSteps", "campaignSettingsForLevel"];
-const api = new Function("window", "BOARD_GENERATION_VERSION", "CAMPAIGN_LEVEL_COUNT",
-  helpers.map(extract).join("\n") + "\nreturn { generateSolvableBoardSteps, campaignSettingsForLevel };")(
-    { HiboLevels: levels }, 3, 30);
+const api = {
+  generateSolvableBoardSteps: require("../board-generator.js").generate,
+  campaignSettingsForLevel: new Function("CAMPAIGN_LEVEL_COUNT", extract("campaignSettingsForLevel") +
+    "\nreturn campaignSettingsForLevel;")(30)
+};
 function finish(iterator) { let step = iterator.next(); while (!step.done) step = iterator.next(); return step.value; }
 const engineFactory = new Function("board", "settings", ["actualPatternId", "isBlankToken", "isMysteryToken",
   "isFixedToken", "revealTopToken", "columnIsSortedForCapacity", "columnIsSorted", "countPatternTiles",
@@ -29,6 +29,11 @@ const configs = [
   { difficulty: "custom", patternCount: 2, capacity: 2, reserveCount: 0, shuffleSteps: 10, mysteryCount: 0, fixedCount: 0 },
   { difficulty: "custom", patternCount: 7, capacity: 12, reserveCount: 0, shuffleSteps: 2400, mysteryCount: 48, fixedCount: 3 }
 ];
+let messages = [];
+const worker = vm.createContext({ self: { postMessage: message => messages.push(message) } });
+worker.importScripts = (...urls) => urls.forEach(url => vm.runInContext(
+  fs.readFileSync(path.join(__dirname, "..", url.split("?")[0]), "utf8"), worker));
+vm.runInContext(fs.readFileSync(require.resolve("../level-worker.js"), "utf8"), worker);
 let checked = 0, maxMs = 0;
 for (const [index, cfg] of configs.entries()) {
   for (const seed of [1, 1996, 20261013]) {
@@ -38,6 +43,14 @@ for (const [index, cfg] of configs.entries()) {
     catch (error) { throw new Error(JSON.stringify({ index, cfg, seed, checked }) + ": " + error.message); }
     maxMs = Math.max(maxMs, Date.now() - start);
     assert(puzzle.generation.verified, "Unverified mode " + index);
+    if (seed === 1) {
+      messages = [];
+      worker.self.onmessage({ data: { settings: cfg, seed } });
+      const last = messages.at(-1);
+      assert.equal(last.type, "complete", "Worker failed mode " + index + ": " + JSON.stringify(last));
+      assert.equal(JSON.stringify(last.board), JSON.stringify(puzzle), "Worker and main-thread seed mismatch");
+      assert(messages.filter(m => m.type === "progress").every(m => m.progress >= 0 && m.progress <= 100));
+    }
     assert(puzzle.generation.solutionMoves > 0, "Starts won " + index);
     assert.equal(puzzle.columns.length, cfg.patternCount + 1);
     assert.equal(puzzle.columns.flat().length, cfg.patternCount * cfg.capacity);
@@ -70,4 +83,4 @@ for (const [index, cfg] of configs.entries()) {
     checked += 1;
   }
 }
-console.log(JSON.stringify({ checked, configs: configs.length, maxGenerationMs: maxMs }));
+console.log(JSON.stringify({ checked, configs: configs.length, workerConfigs: configs.length, maxGenerationMs: maxMs }));

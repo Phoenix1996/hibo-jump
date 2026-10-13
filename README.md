@@ -28,13 +28,15 @@
 
 ## 开发核查
 
-使用 Node.js 运行 `node scripts/verify-hard-levels.cjs 100`，检查随机列高、图案和问号分布，并通过游戏现有移动函数逐步回放求解路径到通关。`node scripts/verify-animation.cjs` 检查逐个出发的顺序、间隔、顶部路线和落地音高。
+使用 Node.js 运行 `node scripts/verify-hard-levels.cjs 100`，检查随机列高、图案和问号分布，并通过游戏现有移动函数逐步回放求解路径到通关。`node scripts/verify-mode-levels.cjs` 检查全部 30 个闯关配置、预设和自定义边界，并检查后台线程与主线程的种子结果一致。`node scripts/verify-animation.cjs` 检查逐个出发的顺序、间隔、顶部路线和出发音高。
 
 ## 存档与离线游玩
 
 游戏进度、三个存档、难度、主题和音效设置保存在当前浏览器的本地存储中，不会自动同步到其他设备。
 
 所有新局都会检查最终棋盘的可解性（包括问号和白格）。普通、自定义和闯关模式仍用反向打乱产生候选，再求解并回放校验；候选耗尽时提示重试，不交付未验证的棋盘。无暂存位模式的反向列间移动还要求可以按同色顶部规则还原。
+
+`board-generator.js` 统一各模式的生成流程，`level-generator.js` 提供困难候选及求解器，`level-worker.js` 在后台执行两者。所有模式均使用后台线程；不支持 Worker 或直接打开 HTML 时，采用页面线程上的分段计算。
 
 在 iPhone 或 iPad 的 Safari 中打开游戏后，可使用“分享 → 添加到主屏幕”以网页 App 形式启动。首次联网打开后，服务工作线程会缓存游戏页面与主题图片，供离线游玩。
 
