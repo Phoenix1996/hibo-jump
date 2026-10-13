@@ -191,6 +191,7 @@
   let audioContext = null;
   let victoryCelebrated = false;
   let storageAvailable = true;
+  const themeAssetPromises = new Map();
 
   function getTheme() {
     return THEMES[currentThemeId] || THEMES.ocean;
@@ -1863,16 +1864,65 @@
     announce("已后退一步。");
   }
 
-  function applyTheme(themeId) {
+  function preloadThemeAssets(themeId) {
+    if (themeAssetPromises.has(themeId)) return themeAssetPromises.get(themeId);
+    const urls = Array.from(new Set(THEMES[themeId].patterns.map(pattern => pattern.image).filter(Boolean)));
+    const ready = Promise.all(urls.map(function (url) {
+      return new Promise(function (resolve, reject) {
+        const image = new window.Image();
+        let settled = false;
+        const timeout = window.setTimeout(function () { finish(false); }, 8000);
+        function finish(success) {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timeout);
+          image.onload = image.onerror = null;
+          if (success) resolve();
+          else reject(new Error("主题图片暂时无法加载"));
+        }
+        image.onload = function () {
+          const decoded = typeof image.decode === "function" ? image.decode() : Promise.resolve();
+          Promise.resolve(decoded).then(function () { finish(true); }, function () { finish(image.naturalWidth > 0); });
+        };
+        image.onerror = function () { finish(false); };
+        image.decoding = "async";
+        image.src = encodeURI(url);
+      });
+    })).catch(function (error) {
+      themeAssetPromises.delete(themeId);
+      throw error;
+    });
+    themeAssetPromises.set(themeId, ready);
+    return ready;
+  }
+
+  async function applyTheme(themeId) {
     if (isAnimating) {
       ui.themeSelect.value = currentThemeId;
       return;
     }
-    if (!THEMES[themeId]) return;
-    currentThemeId = themeId;
-    render();
-    persistLocalData(true);
-    announce("已切换到" + getTheme().name + "，棋盘进度保留。");
+    if (!THEMES[themeId] || themeId === currentThemeId) return;
+    const picker = ui.themeSelect.closest(".theme-picker");
+    isAnimating = true;
+    setBoardCreationControlsDisabled(true);
+    picker.classList.add("is-loading");
+    ui.themeSelect.setAttribute("aria-busy", "true");
+    try {
+      await preloadThemeAssets(themeId);
+      currentThemeId = themeId;
+      render();
+      persistLocalData(true);
+      announce("已切换到" + getTheme().name + "，棋盘进度保留。");
+    } catch (error) {
+      ui.themeSelect.value = currentThemeId;
+      announce("主题图片暂时无法加载，请稍后重试。");
+    } finally {
+      isAnimating = false;
+      picker.classList.remove("is-loading");
+      ui.themeSelect.removeAttribute("aria-busy");
+      setBoardCreationControlsDisabled(false);
+      render();
+    }
   }
 
   function setFormValues(value) {

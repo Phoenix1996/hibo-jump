@@ -130,6 +130,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 }
 .theme-picker { position: relative; }
 .theme-icon { color: var(--teal); font-size: 16px; }
+.theme-picker.is-loading .select-chevron { width: 12px; height: 12px; border: 2px solid #d6e8e2; border-top-color: var(--teal); border-radius: 50%; font-size: 0; animation: theme-loading-spin 650ms linear infinite; }
+@keyframes theme-loading-spin { to { transform: rotate(360deg); } }
 .sound-button[aria-pressed="false"] { color: #96a5a2; background: rgba(245, 248, 246, .9); }
 .theme-picker select {
   width: 82px;
@@ -780,6 +782,7 @@ h1, h2, h3, p { margin-top: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .theme-picker.is-loading .select-chevron { animation: none; }
   .board-loading-tiles i { animation: none; }
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
