@@ -23,6 +23,24 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+      - name: Set up verification runtime
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Verify game before publishing
+        run: |
+          node --check game.js
+          node --check board-generator.js
+          node --check level-generator.js
+          node --check level-worker.js
+          node --check sw.js
+          node scripts/verify-static-assets.cjs
+          node scripts/verify-hard-levels.cjs 100
+          node scripts/verify-mode-levels.cjs
+          node scripts/verify-animation.cjs
+          node scripts/verify-theme-loading.cjs
+          node scripts/verify-campaign-progress.cjs
+          node scripts/verify-generation-recovery.cjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:

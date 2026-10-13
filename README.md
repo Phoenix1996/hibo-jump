@@ -50,6 +50,8 @@
 
 推送到 `main` 分支会触发 `.github/workflows/pages.yml`，由 GitHub Actions 部署到 GitHub Pages。
 
+发布前会检查 JavaScript 语法、100 个困难棋盘、全部闯关配置、移动音效和动画、主题加载、完成记录及生成失败恢复。`node scripts/verify-static-assets.cjs` 还会检查网页、后台线程、主题图片和离线缓存的资源路径与版本是否一致。任一检查失败都会停止本次部署。
+
 ## 许可
 
 本仓库原创游戏代码与文档按 MIT License 授权，见 [`LICENSE`](LICENSE)。`assets/themes/` 中的宝可梦和数码宝贝图片是第三方角色素材，不包含在本仓库的 MIT 授权范围内；这些素材仍受各自权利人的版权及使用规则约束。
