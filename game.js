@@ -81,6 +81,7 @@
   const BOARD_GENERATION_VERSION = 4;
   const STORAGE_KEY = "haibao-jump.local.v1";
   const SAVE_SLOT_COUNT = 3;
+  const SAVED_UNDO_LIMIT = 50;
 
   function campaignSettingsForLevel(level) {
     level = Math.max(1, Math.min(CAMPAIGN_LEVEL_COUNT, Number.parseInt(level, 10) || 1));
@@ -464,6 +465,8 @@
       board: snapshotBoard,
       initialBoard: initialBoard,
       moveCount: moveCount,
+      moveHistory: regeneratedBoard || migratedBlankLayout ? [] :
+        normalizeMoveHistory(source.moveHistory, snapshotBoard, snapshotSettings, moveCount),
       campaignMode: snapshotCampaignMode,
       campaignLevel: Math.max(1, Math.min(CAMPAIGN_LEVEL_COUNT, Number.parseInt(source.campaignLevel, 10) || 1)),
       dailyMode: snapshotDailyMode,
@@ -482,6 +485,9 @@
       board: cloneBoard(board),
       initialBoard: cloneBoard(initialBoard || board),
       moveCount: moveCount,
+      moveHistory: moveHistory.slice(-SAVED_UNDO_LIMIT).map(function (entry) {
+        return { board: cloneBoard(entry.board), moveCount: entry.moveCount };
+      }),
       campaignMode: campaignMode,
       campaignLevel: campaignLevel,
       dailyMode: dailyMode,
@@ -504,9 +510,37 @@
     dailyMode = normalized.dailyMode;
     dailyChallengeDate = normalized.dailyChallengeDate;
     selected = null;
-    moveHistory = [];
+    moveHistory = normalized.moveHistory;
     victoryCelebrated = isVictory();
     return true;
+  }
+
+  function normalizeMoveHistory(source, currentBoard, boardSettings, currentMoveCount) {
+    if (!Array.isArray(source)) return [];
+    const counts = Array.from({ length: boardSettings.patternCount }, function (_, index) {
+      return countPatternTiles(currentBoard, "p" + (index + 1));
+    });
+    function fixedLayout(value) {
+      return value.columns.map(function (column) {
+        return column.map(function (token, level) { return isFixedToken(token) ? level + ":" + token : ""; })
+          .filter(Boolean).join(",");
+      }).join("|");
+    }
+    const fixed = fixedLayout(currentBoard);
+    const result = [];
+    let expectedCount = currentMoveCount - 1;
+    for (let index = source.length - 1; index >= Math.max(0, source.length - SAVED_UNDO_LIMIT); index -= 1) {
+      const entry = source[index];
+      if (!entry || !Number.isInteger(entry.moveCount) || entry.moveCount !== expectedCount || expectedCount < 0 ||
+          hasLegacyGuessCells(entry.board)) break;
+      const previousBoard = normalizeBoard(entry.board, boardSettings);
+      if (!previousBoard || fixedLayout(previousBoard) !== fixed ||
+          previousBoard.columns.some(function (column) { return column.length && isMysteryToken(column[column.length - 1]); }) ||
+          counts.some(function (count, patternIndex) { return countPatternTiles(previousBoard, "p" + (patternIndex + 1)) !== count; })) break;
+      result.unshift({ board: previousBoard, moveCount: entry.moveCount });
+      expectedCount -= 1;
+    }
+    return result;
   }
 
   function loadLocalData() {
