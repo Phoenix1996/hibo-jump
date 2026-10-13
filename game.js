@@ -2100,7 +2100,7 @@
       return typeof image.decode === "function" ? image.decode().catch(function () {}) : Promise.resolve();
     }));
 
-    const stagger = reducedMotion ? 0 : Math.max(22, 36 - move.count * 1.1);
+    const stagger = reducedMotion ? 0 : Math.max(28, 48 - move.count * 1.7);
     const horizontalDistance = Math.abs(targetRects[0].left - sourceRects[0].left);
     const duration = reducedMotion ? 90 : Math.min(320, 250 + horizontalDistance * 0.07);
     await Promise.all(flights.map(async function (_, order) {
@@ -2112,6 +2112,7 @@
       if (order && stagger) await new Promise(resolve => window.setTimeout(resolve, order * stagger));
       sourceCells[sourceOffset].classList.add("is-flight-source");
       flight.style.visibility = "visible";
+      playSound("tile", tokens[sourceOffset], order);
       const dx = targetRect.left - sourceRect.left;
       const dy = targetRect.top - sourceRect.top;
       const lift = sourceRect.height * 0.72 + 6;
@@ -2136,7 +2137,6 @@
         await animateFlightTile(flight, sourceRect, targetRect, reducedMotion);
       }
       await revealFlightTile(flight, tokens[sourceOffset], sourceRect, targetRect, reducedMotion);
-      playSound("tile", tokens[sourceOffset], order);
       vibrateOnLanding(true);
     }));
 
