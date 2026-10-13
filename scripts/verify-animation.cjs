@@ -40,7 +40,10 @@ async function checkGroup(count, reducedMotion) {
     elementsForColumnLevels: (col, start, n) => cells[col].slice(start, start + n),
     createFlightTile: (token, rect) => ({ style: {}, querySelector: () => null, remove() {}, animate: (keyframes, options) => { frames.push({ rect, keyframes, options }); return { finished: Promise.resolve() }; } }),
     render() {},
-    playSound: (kind, token, sequence) => notes.push({ kind, token, sequence }),
+    playSound: (kind, token, sequence) => {
+      assert.equal(frames.length, sequence, "Each sound must start with departure, before its flight begins");
+      notes.push({ kind, token, sequence });
+    },
     vibrateOnLanding: short => assert(short),
     animateSourceReveal: async () => {},
     revealFlightTile: async () => {},
@@ -74,10 +77,13 @@ async function main() {
     createGain: () => ({ gain: { setValueAtTime() {}, exponentialRampToValueAtTime: value => { if (value > 0.001) volumes.push(value); } }, connect() {} })
   };
   const audio = new Function("soundEnabled", "prepareAudioContext", "getTheme", "actualPatternId", extract("playSound") + "\nreturn playSound;")(true, () => context, () => ({ patterns: [{ id: "p1" }] }), t => t);
-  for (let i = 0; i < 4; i += 1) audio("tile", "p1", i);
-  assert.equal(frequencies.length, 4);
+  for (let i = 0; i < 12; i += 1) audio("tile", "p1", i);
+  assert.equal(frequencies.length, 12);
   assert(frequencies.every((value, i) => !i || value > frequencies[i - 1]));
   assert(volumes.every(value => value === volumes[0]), "Pitch progression must not just increase volume");
+  const muted = new Function("soundEnabled", "prepareAudioContext", extract("playSound") + "\nreturn playSound;")(
+    false, () => { throw new Error("Muted sound must not create or resume audio"); });
+  muted("tile", "p1", 1);
   console.log("Passed: top-first stagger, rim route, destination order, atomic group state, reduced motion, per-tile ascending pitch.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

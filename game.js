@@ -857,7 +857,7 @@
       const tileIndex = kind === "tile"
         ? Math.max(0, getTheme().patterns.findIndex(function (pattern) { return pattern.id === actualPatternId(variant); }))
         : 0;
-      const pitchSteps = [0, 2, 4, 5, 7, 9, 11, 12];
+      const pitchSteps = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17, 19];
       const tileFrequency = tileNotes[tileIndex % tileNotes.length] *
         Math.pow(2, pitchSteps[Math.min(pitchSteps.length - 1, Math.max(0, sequenceIndex || 0))] / 12);
       const notes = kind === "win" ? [523.25, 659.25, 783.99, 1046.5] :
