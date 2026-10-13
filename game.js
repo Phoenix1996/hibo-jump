@@ -1089,6 +1089,39 @@
     if (currentSettings.difficulty === "hard") {
       return yield* window.HiboLevels.generate(currentSettings, seed);
     }
+    const attempts = currentSettings.reserveCount === 0 ? 18 : 6;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const candidateSeed = Number.isInteger(seed) ? (seed + attempt * 104729) >>> 0 : undefined;
+      const reverse = generateReverseBoardSteps(currentSettings, candidateSeed);
+      let step = reverse.next();
+      while (!step.done) {
+        yield { progress: (attempt + step.value.progress / 100 * .4) / attempts * 95,
+          phase: "正在打乱棋盘" };
+        step = reverse.next();
+      }
+      const candidate = step.value;
+      const numericBoard = {
+        columns: candidate.columns.map(column => column.map(token => isBlankToken(token) ? 0 :
+          Number(actualPatternId(token).slice(1)) + (isMysteryToken(token) ? 16 : 0))),
+        reserve: []
+      };
+      const solver = window.HiboLevels.solve(numericBoard, currentSettings, 12000);
+      let check = solver.next();
+      while (!check.done) {
+        yield { progress: (attempt + .4 + Math.min(1, check.value.explored / 12000) * .6) / attempts * 95,
+          phase: "正在检查棋盘" };
+        check = solver.next();
+      }
+      if (!check.value.solved || !check.value.moves.length ||
+          !window.HiboLevels.replay(numericBoard, check.value.moves, currentSettings)) continue;
+      candidate.generation = { version: BOARD_GENERATION_VERSION, verified: true,
+        solutionMoves: check.value.moves.length, explored: check.value.explored };
+      return candidate;
+    }
+    throw new Error("候选棋盘尚未通过可解性检查，请重试。");
+  }
+
+  function* generateReverseBoardSteps(currentSettings, seed) {
     const randomSource = Number.isInteger(seed) ? createSeededRandom(seed) : Math.random;
     const pickIndex = function (max) { return randomIndex(max, randomSource); };
     const fixedCount = Math.min(currentSettings.fixedCount, currentSettings.capacity - 1, currentSettings.patternCount);
@@ -1170,6 +1203,10 @@
           if (!donor.length) continue;
           const patternId = actualPatternId(donor[donor.length - 1]);
           if (!patternId || !topGroupSize(donor)) continue;
+          // Without a tray, every reverse transfer must be undoable by a
+          // matching-top column move. Arbitrary pops can otherwise strand colors.
+          const remainingTop = donor.length > 1 ? actualPatternId(donor[donor.length - 2]) : null;
+          if (currentSettings.reserveCount === 0 && remainingTop && remainingTop !== patternId) continue;
 
           for (let targetIndex = 0; targetIndex < columns.length; targetIndex += 1) {
             if (targetIndex === donorIndex) continue;
