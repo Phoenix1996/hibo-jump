@@ -127,6 +127,10 @@
     reserveSection: document.getElementById("reserveSection"),
     reserveSlots: document.getElementById("reserveSlots"),
     gameMessage: document.getElementById("gameMessage"),
+    boardLoading: document.getElementById("boardLoading"),
+    boardLoadingTrack: document.querySelector(".board-loading-track"),
+    boardLoadingProgress: document.getElementById("boardLoadingProgress"),
+    boardLoadingLabel: document.getElementById("boardLoadingLabel"),
     cancelSelectionButton: document.getElementById("cancelSelectionButton"),
     restartButton: document.getElementById("restartButton"),
     newGameButton: document.getElementById("newGameButton"),
@@ -683,43 +687,49 @@
     else ui.campaignDialog.removeAttribute("open");
   }
 
-  function startCampaignLevel(level) {
+  async function startCampaignLevel(level) {
     if (isAnimating) return;
     campaignMode = true;
     dailyMode = false;
     dailyChallengeDate = "";
     campaignLevel = Math.max(1, Math.min(campaignUnlockedLevel, CAMPAIGN_LEVEL_COUNT, Number.parseInt(level, 10) || 1));
     settings = campaignSettingsForLevel(campaignLevel);
+    closeCampaignDialog();
+    setFormValues(settings);
+    const newBoard = await buildSolvableBoardWithProgress(settings);
+    if (!newBoard) return;
     selected = null;
     moveCount = 0;
     moveHistory = [];
-    board = buildSolvableBoard(settings);
+    board = newBoard;
     initialBoard = cloneBoard(board);
     victoryCelebrated = false;
     clearCelebration();
-    closeCampaignDialog();
-    setFormValues(settings);
     render();
+    playBoardOpeningAnimation();
     persistLocalData(true);
     announce("第 " + campaignLevel + " 关开始。完成后会解锁下一关。");
   }
 
-  function startDailyChallenge(dateKey) {
+  async function startDailyChallenge(dateKey) {
     if (isAnimating) return;
     dailyChallengeDate = isValidDateKey(dateKey) ? dateKey : localDateKey();
     dailyMode = true;
     campaignMode = false;
     settings = selectedPresetSettings("hard");
+    closeCampaignDialog();
+    setFormValues(settings);
+    const newBoard = await buildSolvableBoardWithProgress(settings, dateSeed(dailyChallengeDate));
+    if (!newBoard) return;
     selected = null;
     moveCount = 0;
     moveHistory = [];
-    board = buildSolvableBoard(settings, dateSeed(dailyChallengeDate));
+    board = newBoard;
     initialBoard = cloneBoard(board);
     victoryCelebrated = false;
     clearCelebration();
-    closeCampaignDialog();
-    setFormValues(settings);
     render();
+    playBoardOpeningAnimation();
     persistLocalData(true);
     announce("" + formatDateKey(dailyChallengeDate) + " 的每日挑战开始。同一天的棋盘相同。");
   }
@@ -746,17 +756,20 @@
     setNewGame();
   }
 
-  function createGameInSlot(index) {
+  async function createGameInSlot(index) {
+    closeSaveDialog();
     activeSaveId = index;
+    const newBoard = await buildSolvableBoardWithProgress(settings, dailyMode ? dateSeed(dailyChallengeDate) : undefined);
+    if (!newBoard) return;
     selected = null;
     moveCount = 0;
     moveHistory = [];
-    board = buildSolvableBoard(settings, dailyMode ? dateSeed(dailyChallengeDate) : undefined);
+    board = newBoard;
     initialBoard = cloneBoard(board);
     victoryCelebrated = false;
     clearCelebration();
-    closeSaveDialog();
     render();
+    playBoardOpeningAnimation();
     persistLocalData(true);
     announce("已在存档 " + (index + 1) + " 开始新一局。");
   }
@@ -974,18 +987,106 @@
     });
     const topGroupPenalty = Math.max(0, largestTopGroup - 1) ** 2 * 8;
     const pairRate = patternRunCount ? repeatedRuns[2] / patternRunCount : 0;
-    const pairRatePenalty = Math.abs(pairRate - 0.05);
     return {
       score: score - topGroupPenalty - solvedColumns * 60,
       largestRun: largestRun,
       pairCount: repeatedRuns[2],
       runCount: patternRunCount,
-      pairRate: pairRate,
-      pairRatePenalty: pairRatePenalty
+      pairRate: pairRate
     };
   }
 
-  function buildSolvableBoard(currentSettings, seed) {
+  function normalizeHardBoardShape(sourceColumns, currentSettings, pickIndex) {
+    const patternColumnCount = currentSettings.patternCount;
+    const spareColumnIndex = patternColumnCount;
+    const candidateLayouts = [];
+
+    for (let shortColumnIndex = 0; shortColumnIndex < patternColumnCount; shortColumnIndex += 1) {
+      const targetHeights = Array(patternColumnCount + 1).fill(currentSettings.capacity);
+      targetHeights[shortColumnIndex] = currentSettings.capacity - 1;
+      targetHeights[spareColumnIndex] = 1;
+      const distance = sourceColumns.reduce(function (total, column, index) {
+        return total + Math.abs(column.length - targetHeights[index]);
+      }, 0);
+      candidateLayouts.push({ shortColumnIndex: shortColumnIndex, targetHeights: targetHeights, distance: distance, tie: pickIndex(1000000) });
+    }
+    candidateLayouts.sort(function (left, right) {
+      return left.distance - right.distance || left.tie - right.tie;
+    });
+
+    for (let layoutIndex = 0; layoutIndex < candidateLayouts.length; layoutIndex += 1) {
+      const targetHeights = candidateLayouts[layoutIndex].targetHeights;
+      if (currentSettings.reserveCount < 1) continue;
+      const columns = sourceColumns.map(function (column) { return column.slice(); });
+      const hasLockedOverfullColumn = columns.some(function (column, index) {
+        return column.length > targetHeights[index] && columnIsSortedForCapacity(column, currentSettings.capacity);
+      });
+      if (hasLockedOverfullColumn) continue;
+
+      const visited = new Set();
+      let exploredStates = 0;
+      const stateBudget = 320;
+      function searchShape() {
+        const heightsMatch = columns.every(function (column, index) { return column.length === targetHeights[index]; });
+        if (heightsMatch) return true;
+        if (exploredStates >= stateBudget) return false;
+        exploredStates += 1;
+
+        const stateKey = columns.map(function (column) { return column.join(","); }).join("|");
+        if (visited.has(stateKey)) return false;
+        visited.add(stateKey);
+
+        const deficits = [];
+        columns.forEach(function (column, index) {
+          if (column.length < targetHeights[index] && !columnIsSortedForCapacity(column, currentSettings.capacity)) {
+            deficits.push(index);
+          }
+        });
+
+        const directTransfers = [];
+        columns.forEach(function (donor, donorIndex) {
+          if (donor.length <= targetHeights[donorIndex] || columnIsSortedForCapacity(donor, currentSettings.capacity)) return;
+          const groupSize = topGroupSize(donor);
+          if (!groupSize) return;
+          const patternId = actualPatternId(donor[donor.length - 1]);
+          // After taking one icon into a reserve slot, the source must still
+          // accept that icon if the layout adjustment is undone.
+          if (groupSize < 2 && donor.length > 1) return;
+          deficits.forEach(function (targetIndex) {
+            if (targetIndex === donorIndex) return;
+            const target = columns[targetIndex];
+            const targetTopPattern = target.length ? actualPatternId(target[target.length - 1]) : null;
+            if (target.length >= currentSettings.capacity || (targetTopPattern && targetTopPattern !== patternId) ||
+                wouldCompleteColumnAfterAdding(target, patternId, currentSettings.capacity)) return;
+            directTransfers.push({ donorIndex: donorIndex, targetIndex: targetIndex, patternId: patternId });
+          });
+        });
+
+        for (let index = directTransfers.length - 1; index > 0; index -= 1) {
+          const swapIndex = pickIndex(index + 1);
+          const transfer = directTransfers[index];
+          directTransfers[index] = directTransfers[swapIndex];
+          directTransfers[swapIndex] = transfer;
+        }
+        for (let index = 0; index < directTransfers.length; index += 1) {
+          const transfer = directTransfers[index];
+          const donor = columns[transfer.donorIndex];
+          // Rebalance through a one-tile reserve move so stack grouping rules are preserved.
+          const token = donor.pop();
+          columns[transfer.targetIndex].push(token);
+          if (searchShape()) return true;
+          columns[transfer.targetIndex].pop();
+          donor.push(token);
+        }
+        return false;
+      }
+      if (searchShape()) return { columns: columns, shortColumnIndex: candidateLayouts[layoutIndex].shortColumnIndex };
+    }
+
+    return null;
+  }
+
+  function* generateSolvableBoardSteps(currentSettings, seed) {
     const randomSource = Number.isInteger(seed) ? createSeededRandom(seed) : Math.random;
     const pickIndex = function (max) { return randomIndex(max, randomSource); };
     const fixedCount = Math.min(currentSettings.fixedCount, currentSettings.capacity - 1, currentSettings.patternCount);
@@ -995,17 +1096,22 @@
     const blankPatternCount = fixedCount === 0 ? 0 : fixedCount === 1 ? 1 :
       fixedCount === 2 ? (blankDistributionRoll < 65 ? 1 : 2) :
         (blankDistributionRoll < 40 ? 1 : blankDistributionRoll < 80 ? 2 : 3);
-    // Compare multiple reverse walks, keep their solvable path, and prefer
-    // sparse doubles. Hard boards never retain a run longer than two.
+    // Compare a small pool of reverse walks, keep their solvable path, and
+    // prefer boards with no adjacent matching patterns. Hard boards never
+    // retain a run longer than two.
     const isHardMode = currentSettings.difficulty === "hard";
-    const attemptCount = isHardMode ? 24 : 1;
+    const attemptCount = isHardMode ? 12 : 1;
     const reverseLookback = Math.min(16, Math.max(10, currentSettings.patternCount * 2));
     let bestColumns = null;
     let bestReverseSteps = -1;
     let bestQuality = -Infinity;
-    let bestPairRatePenalty = Infinity;
+    let bestPairCount = Infinity;
+    let bestShapedColumns = null;
+    let bestShapedQuality = Infinity;
+    let bestShapedPairCount = Infinity;
+    let fallbackHardColumns = null;
 
-    for (let attempt = 0; attempt < attemptCount || (isHardMode && !bestColumns); attempt += 1) {
+    for (let attempt = 0; attempt < attemptCount; attempt += 1) {
       const availablePatterns = [];
       for (let index = 0; index < currentSettings.patternCount; index += 1) availablePatterns.push(index + 1);
       for (let index = availablePatterns.length - 1; index > 0; index -= 1) {
@@ -1036,6 +1142,11 @@
         columns.push(column);
       }
       columns.push([]);
+      if (isHardMode && !fallbackHardColumns) {
+        fallbackHardColumns = columns.map(function (column) { return column.slice(); });
+        const fallbackSource = fallbackHardColumns[currentSettings.patternCount - 1];
+        fallbackHardColumns[currentSettings.patternCount].push(fallbackSource.pop());
+      }
       const reserve = Array(currentSettings.reserveCount).fill(null);
 
       const recentReverseMoves = [];
@@ -1060,7 +1171,8 @@
             const target = columns[targetIndex];
             const targetTopPattern = target.length ? actualPatternId(target[target.length - 1]) : null;
             const targetGroupSize = targetTopPattern === patternId ? topGroupSize(target) : 0;
-            // Allow a rare pair, but never build a triple into the starting board.
+            // Avoid creating visible matching pairs where another move is available.
+            // A pair may still be necessary when all legal destinations join a group.
             if ((isHardMode && targetGroupSize >= 2) ||
                 (!isHardMode && targetTopPattern === patternId)) continue;
             if (target.length >= currentSettings.capacity) continue;
@@ -1121,10 +1233,7 @@
         const nonPairChoices = availableChoices.filter(function (candidate) { return !candidate.joinsGroup; });
         let chosen;
         if (isHardMode && pairChoices.length && nonPairChoices.length) {
-          // Only about one in twenty reverse placements should create a pair.
-          const allowPair = pickIndex(100) < 5;
-          const preferredChoices = allowPair ? pairChoices : nonPairChoices;
-          chosen = preferredChoices[pickIndex(preferredChoices.length)];
+          chosen = nonPairChoices[pickIndex(nonPairChoices.length)];
         } else {
           chosen = availableChoices[pickIndex(availableChoices.length)];
         }
@@ -1140,6 +1249,11 @@
           blockedReverseMoveKeys.delete(reverseMoveKey(recentReverseMoves.shift()));
         }
         completedReverseSteps += 1;
+        if ((step + 1) % 600 === 0) {
+          const progress = ((attempt * currentSettings.shuffleSteps + step + 1) /
+            (attemptCount * currentSettings.shuffleSteps)) * 96;
+          yield { progress: Math.min(96, Math.round(progress)) };
+        }
       }
       const randomWalkSteps = completedReverseSteps;
 
@@ -1173,9 +1287,6 @@
         const nonPairReleases = scoredReleases.filter(function (item) { return !item.joinsGroup; });
         const pairReleases = scoredReleases.filter(function (item) { return item.joinsGroup; });
         let bestReleases = nonPairReleases.length ? nonPairReleases : pairReleases;
-        if (isHardMode && nonPairReleases.length && pairReleases.length && pickIndex(100) < 5) {
-          bestReleases = pairReleases;
-        }
         const chosenRelease = bestReleases[pickIndex(bestReleases.length)].candidate;
         const token = reserve[chosenRelease.reserveIndex];
         reserve[chosenRelease.reserveIndex] = null;
@@ -1200,21 +1311,41 @@
         }
       }
 
-      const quality = scrambleQuality(columns, currentSettings.capacity);
+      let candidateColumns = columns;
+      if (isHardMode) {
+        const shapedBoard = normalizeHardBoardShape(columns, currentSettings, pickIndex);
+        if (!shapedBoard) {
+          yield { progress: Math.min(96, Math.round(((attempt + 1) / attemptCount) * 96)) };
+          continue;
+        }
+        candidateColumns = shapedBoard.columns;
+      }
+
+      const quality = scrambleQuality(candidateColumns, currentSettings.capacity);
+      if (isHardMode && (!bestShapedColumns || quality.largestRun < bestShapedQuality ||
+          (quality.largestRun === bestShapedQuality && quality.pairCount < bestShapedPairCount))) {
+        bestShapedColumns = candidateColumns;
+        bestShapedQuality = quality.largestRun;
+        bestShapedPairCount = quality.pairCount;
+      }
       // Source game tiles are scored before mystery faces are added.
-      if (isHardMode && quality.largestRun > 2) continue;
-      if (randomWalkSteps > bestReverseSteps ||
+      if (isHardMode && quality.largestRun > 2) {
+        yield { progress: Math.min(96, Math.round(((attempt + 1) / attemptCount) * 96)) };
+        continue;
+      }
+      if (!bestColumns || randomWalkSteps > bestReverseSteps ||
           (randomWalkSteps === bestReverseSteps &&
-            (quality.pairRatePenalty < bestPairRatePenalty ||
-              (quality.pairRatePenalty === bestPairRatePenalty && quality.score > bestQuality)))) {
+            (quality.pairCount < bestPairCount ||
+              (quality.pairCount === bestPairCount && quality.score > bestQuality)))) {
         bestReverseSteps = randomWalkSteps;
         bestQuality = quality.score;
-        bestPairRatePenalty = quality.pairRatePenalty;
-        bestColumns = columns;
+        bestPairCount = quality.pairCount;
+        bestColumns = candidateColumns;
       }
+      yield { progress: Math.min(96, Math.round(((attempt + 1) / attemptCount) * 96)) };
     }
 
-    const columns = bestColumns || [[]];
+    const columns = bestColumns || bestShapedColumns || fallbackHardColumns || [[]];
 
     const mysteryCandidatesByNeighborMatches = [[], [], []];
     columns.forEach(function (column, columnIndex) {
@@ -1232,7 +1363,10 @@
       }
     });
     const mysteryCandidates = [];
-    mysteryCandidatesByNeighborMatches.forEach(function (bucket) {
+    // Mask matching neighbors first so visible tiles do not form accidental
+    // pairs. The hidden true pattern stays in the solvable board underneath.
+    [1, 2, 0].forEach(function (neighborCount) {
+      const bucket = mysteryCandidatesByNeighborMatches[neighborCount];
       for (let index = bucket.length - 1; index > 0; index -= 1) {
         const swapIndex = pickIndex(index + 1);
         const candidate = bucket[index];
@@ -1251,6 +1385,49 @@
       columns: columns,
       reserve: Array(currentSettings.reserveCount).fill(null)
     };
+  }
+
+  function buildSolvableBoard(currentSettings, seed) {
+    const generator = generateSolvableBoardSteps(currentSettings, seed);
+    let step = generator.next();
+    while (!step.done) step = generator.next();
+    return step.value;
+  }
+
+  async function buildSolvableBoardWithProgress(currentSettings, seed) {
+    isAnimating = true;
+    ui.boardLoading.hidden = false;
+    ui.boardLoadingProgress.style.width = "0%";
+    ui.boardLoadingTrack.setAttribute("aria-valuenow", "0");
+    ui.boardLoadingLabel.textContent = "正在准备棋盘 · 0%";
+    setBoardCreationControlsDisabled(true);
+    try {
+      await new Promise(function (resolve) { window.requestAnimationFrame(resolve); });
+      const generator = generateSolvableBoardSteps(currentSettings, seed);
+      let step = generator.next();
+      while (!step.done) {
+        const progress = Math.max(0, Math.min(96, step.value.progress || 0));
+        ui.boardLoadingProgress.style.width = progress + "%";
+        ui.boardLoadingTrack.setAttribute("aria-valuenow", String(progress));
+        ui.boardLoadingLabel.textContent = "正在生成可解棋盘 · " + progress + "%";
+        await new Promise(function (resolve) { window.requestAnimationFrame(resolve); });
+        step = generator.next();
+      }
+
+      ui.boardLoadingProgress.style.width = "100%";
+      ui.boardLoadingTrack.setAttribute("aria-valuenow", "100");
+      ui.boardLoadingLabel.textContent = "棋盘准备好了";
+      await new Promise(function (resolve) { window.requestAnimationFrame(resolve); });
+      ui.boardLoading.hidden = true;
+      return step.value;
+    } catch (error) {
+      ui.boardLoading.hidden = true;
+      isAnimating = false;
+      setBoardCreationControlsDisabled(false);
+      render();
+      announce("棋盘生成遇到问题，请再试一次。");
+      return null;
+    }
   }
 
   function isVictory() {
@@ -1603,6 +1780,52 @@
     ui.soundToggle.setAttribute("aria-pressed", String(soundEnabled));
     updateSaveButton();
     ui.columns.style.setProperty("--column-count", board.columns.length);
+  }
+
+  function setBoardCreationControlsDisabled(disabled) {
+    [ui.themeSelect, ui.settingsButton, ui.campaignButton, ui.dailyChallengeButton,
+      ui.newGameButton, ui.restartButton, ui.shuffleButton, ui.undoButton, ui.saveButton]
+      .forEach(function (control) { control.disabled = disabled; });
+    if (disabled) {
+      ui.columns.querySelectorAll(".column").forEach(function (element) { element.setAttribute("aria-disabled", "true"); });
+      ui.reserveSlots.querySelectorAll(".reserve-slot").forEach(function (element) { element.setAttribute("aria-disabled", "true"); });
+    } else {
+      ui.columns.querySelectorAll(".column").forEach(function (element) { element.removeAttribute("aria-disabled"); });
+      ui.reserveSlots.querySelectorAll(".reserve-slot").forEach(function (element) { element.removeAttribute("aria-disabled"); });
+    }
+  }
+
+  function playBoardOpeningAnimation() {
+    const cells = Array.from(ui.columns.querySelectorAll(".stack-cell.tile"));
+    if (!cells.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      ui.boardLoading.hidden = true;
+      isAnimating = false;
+      setBoardCreationControlsDisabled(false);
+      render();
+      return;
+    }
+
+    isAnimating = true;
+    let lastDelay = 0;
+    cells.forEach(function (cell) {
+      const column = cell.closest(".column");
+      const columnIndex = column ? Number(column.dataset.index) : 0;
+      const level = Number(cell.dataset.level) || 0;
+      const delay = columnIndex * 22 + level * 10;
+      lastDelay = Math.max(lastDelay, delay);
+      cell.style.setProperty("--opening-delay", delay + "ms");
+    });
+
+    setBoardCreationControlsDisabled(true);
+    ui.columns.classList.add("is-opening");
+
+    window.setTimeout(function () {
+      ui.columns.classList.remove("is-opening");
+      cells.forEach(function (cell) { cell.style.removeProperty("--opening-delay"); });
+      isAnimating = false;
+      setBoardCreationControlsDisabled(false);
+      render();
+    }, lastDelay + 470);
   }
 
   function clearSelection() {
@@ -2056,18 +2279,21 @@
     }
   }
 
-  function setNewGame(message) {
+  async function setNewGame(message) {
     if (isAnimating) return;
     if (typeof message !== "string") message = "";
+    if (dailyMode) dailyChallengeDate = localDateKey();
+    const newBoard = await buildSolvableBoardWithProgress(settings, dailyMode ? dateSeed(dailyChallengeDate) : undefined);
+    if (!newBoard) return;
     selected = null;
     moveCount = 0;
     moveHistory = [];
-    if (dailyMode) dailyChallengeDate = localDateKey();
-    board = buildSolvableBoard(settings, dailyMode ? dateSeed(dailyChallengeDate) : undefined);
+    board = newBoard;
     initialBoard = cloneBoard(board);
     victoryCelebrated = false;
     clearCelebration();
     render();
+    playBoardOpeningAnimation();
     persistLocalData(true);
     announce(message || (dailyMode
       ? formatDateKey(dailyChallengeDate) + " 的每日棋盘已重开。同一天的棋盘相同。"
@@ -2083,6 +2309,7 @@
     victoryCelebrated = false;
     clearCelebration();
     render();
+    playBoardOpeningAnimation();
     persistLocalData(true);
     announce("已重新开始这局。");
   }

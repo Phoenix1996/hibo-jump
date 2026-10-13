@@ -13,8 +13,8 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='20' fill='%23127b77'/%3E%3Ctext x='32' y='46' text-anchor='middle' font-size='43'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E">
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="styles.css?v=20261013-6">
-    <script src="game.js?v=20261013-13" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20261013-7">
+    <script src="game.js?v=20261013-15" defer></script>
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -273,6 +273,16 @@
       </div>
     </dialog>
 
+    <div class="board-loading" id="boardLoading" hidden role="status" aria-live="polite" aria-label="正在生成棋盘">
+      <div class="board-loading-card">
+        <div class="board-loading-tiles" aria-hidden="true"><i>✦</i><i>✧</i><i>◇</i><i>✦</i><i>✧</i></div>
+        <strong>正在生成新棋盘</strong>
+        <div class="board-loading-track" role="progressbar" aria-label="棋盘生成进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="boardLoadingProgress"></span>
+        </div>
+        <small id="boardLoadingLabel">正在准备棋盘 · 0%</small>
+      </div>
+    </div>
     <div class="flight-layer" id="flightLayer" aria-hidden="true"></div>
     <div class="celebration-layer" id="celebrationLayer" aria-hidden="true"></div>
     <script>
